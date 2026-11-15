@@ -2,6 +2,12 @@
 
 ## Unreleased — Independent runtime milestone
 
+- Added a shared IR data model for vector operations and memory operands.
+- Added an x64 ModRM/SIB address decoder with RIP-relative and displacement handling.
+- Added a translated-block cache prototype with overlap-based invalidation.
+- Added CPUID/XGETBV coverage policy derivation that keeps AVX hidden until memory coverage is enabled.
+- Added deterministic AVX1 application-style regression programs, including VMOV store forms.
+- Added Xenia-oriented profile templates and a Windows x64 release packaging script.
 - Added GitHub Actions CI for Linux no-AVX/QEMU, Windows x64, CMake, the SSE POC, and the C# launcher.
 - Fixed CRLF handling and strict hexadecimal validation in the runtime program parser.
 - Rejected reserved VEX.X encodings in register-only VEX3 forms.

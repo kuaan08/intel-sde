@@ -8,3 +8,4 @@
 /avx1-sse-poc/build/
 /avx1-sse-poc/build-*/
 /sde-avx-lab-app/build-validation/
+/dist/

@@ -23,7 +23,9 @@ jobs:
           sparse-checkout: |
             avx-runtime
             avx1-sse-poc
+            profiles
             docs
+            tools
             README.md
             LICENSE
             THIRD-PARTY-NOTICES.md
@@ -53,6 +55,13 @@ jobs:
           QEMU_LD_PREFIX: /usr/x86_64-linux-gnu
         run: ./tests/run-tests.sh
 
+      - name: Run AVX1 application regression programs
+        working-directory: avx-runtime
+        env:
+          QEMU: qemu-x86_64
+          QEMU_LD_PREFIX: /usr/x86_64-linux-gnu
+        run: ./tests/run-avx1-suite.sh
+
       - name: CMake configure and CTest
         run: |
           cmake -S avx-runtime -B avx-runtime/build-ci \
@@ -74,7 +83,9 @@ jobs:
             avx-runtime
             avx1-sse-poc
             sde-avx-lab-app
+            profiles
             docs
+            tools
             README.md
             LICENSE
             THIRD-PARTY-NOTICES.md
@@ -104,3 +115,13 @@ jobs:
         run: |
           if (!(Test-Path 'avx-runtime/build-ci/Release/avx_runtime.exe')) { throw 'Runtime executable missing' }
           if (!(Test-Path 'sde-avx-lab-app/bin/SDE AVX Lab.exe')) { throw 'Launcher executable missing' }
+
+      - name: Package Windows x64 artifacts
+        shell: pwsh
+        run: .\tools\package-windows.ps1
+
+      - name: Upload Windows x64 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: sde-avx-lab-windows-x64
+          path: dist/sde-avx-lab-windows-x64.zip

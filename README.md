@@ -27,7 +27,7 @@ The current independent runtime can:
 - produce deterministic state checksums;
 - run tests compiled with AVX disabled on the host toolchain.
 
-The current runtime is not yet a full process-level DBT and must not be advertised as a finished game emulator. Memory operands, basic-block translation, process interception, code-cache invalidation, JIT code support, exception handling, and broad AVX/AVX2 coverage are still under development.
+The current runtime is not yet a full process-level DBT and must not be advertised as a finished game emulator. Memory operands are currently decoded into a shared IR prototype, while execution of guest memory and process interception are still under development. A block-cache and coverage-gating prototype is present; JIT code support, Windows exception integration, and broad AVX/AVX2 coverage are not complete.
 
 ## Repository layout
 
@@ -35,6 +35,7 @@ The current runtime is not yet a full process-level DBT and must not be advertis
 sde-gaming-4f6209bb/
 ├── avx-runtime/                 Independent AVX1 interpreter runtime
 │   ├── src/                     Runtime source code
+│   ├── include/                 Shared IR, memory addressing, cache, and feature policy
 │   ├── tests/                   Runtime programs and automated tests
 │   ├── CMakeLists.txt            Cross-platform build definition
 │   └── Build-Windows.bat         Windows x64 build script
@@ -44,6 +45,8 @@ sde-gaming-4f6209bb/
 ├── linux-9.14/                  Historical Linux reference package
 ├── lab/                         Non-invasive package audit tools
 ├── docs/                        Project architecture and engineering notes
+├── profiles/                    Application profile templates
+├── tools/                       Windows release packaging scripts
 ├── LICENSE                      License for original SDE AVX Lab files
 └── THIRD-PARTY-NOTICES.md       External package and license boundaries
 ```
@@ -188,16 +191,17 @@ The original SDE AVX Lab source code is licensed under the license in `LICENSE`.
 - [x] AVX1 register-only interpreter prototype
 - [x] AVX1-to-SSE register-only proof of concept
 - [x] Windows launcher prototype
-- [ ] Memory operands and x64 addressing
-- [ ] Shared IR for interpreter and SSE backend
+- [x] ModRM/SIB memory operands and x64 addressing decoder prototype
+- [x] Shared IR data model and block-cache invalidation prototype
 - [ ] Basic-block translation
-- [ ] Executable-memory discovery and invalidation
+- [ ] Executable-memory discovery and process-level invalidation
 - [ ] Windows thread and exception runtime
-- [ ] CPUID/XGETBV virtualization with coverage gating
-- [ ] AVX1 application test suite
+- [x] CPUID/XGETBV coverage policy prototype
+- [x] Deterministic AVX1 application-style regression suite
 - [ ] AVX2 implementation milestones
-- [ ] Game-specific compatibility profiles
-- [ ] Performance tuning and release packaging
+- [x] Game-specific compatibility profile templates
+- [x] Windows CI build and release packaging
+- [ ] Performance tuning and benchmark suite
 
 ## Contributing
 

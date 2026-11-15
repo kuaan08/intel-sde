@@ -1,0 +1,8 @@
+SdePath=C:\\Sde\\sde.exe
+TargetPath=C:\\Games\\Xenia\\xenia_canary.exe
+WorkingDirectory=C:\\Games\\Xenia
+Arguments=
+Profile=-snb
+Backend=Intel SDE 9.58 (external, comparison)
+Mix=False
+XInUse=False

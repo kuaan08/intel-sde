@@ -9,7 +9,9 @@ OBJDUMP="${OBJDUMP:-x86_64-linux-gnu-objdump}"
 mkdir -p "$BUILD"
 "$CXX" -std=c++17 -O2 -Wall -Wextra -Wpedantic \
   -march=x86-64 -msse4.2 -mno-avx -mno-avx2 -mno-fma -mno-avx512f \
-  -fno-tree-vectorize -fno-lto "$ROOT/src/avx_runtime.cpp" -o "$BUILD/avx_runtime"
+  -fno-tree-vectorize -fno-lto -I"$ROOT/include" \
+  "$ROOT/src/avx_runtime.cpp" "$ROOT/src/memory_address.cpp" "$ROOT/src/block_cache.cpp" "$ROOT/src/feature_policy.cpp" \
+  -o "$BUILD/avx_runtime"
 "$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --self-test
 "$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --decode "c4 41 34 58 e6"
 "$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --run-file "$ROOT/tests/sample-program.txt"

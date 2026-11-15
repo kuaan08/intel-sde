@@ -1,0 +1,6 @@
+# VADDPS xmm0,xmm1,xmm2
+c5 f0 58 c2
+# VXORPS xmm3,xmm4,xmm5
+c5 d8 57 dd
+# VZEROUPPER
+c5 f8 77
