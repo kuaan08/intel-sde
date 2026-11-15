@@ -8,6 +8,8 @@ $stage = Join-Path $root "dist\\sde-avx-lab-windows-x64"
 Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $stage | Out-Null
 Copy-Item (Join-Path $root "avx-runtime\\build-ci\\$Configuration\\avx_runtime.exe") $stage
+Copy-Item (Join-Path $root "avx-runtime\\build-ci\\$Configuration\\avx_winshim.dll") $stage
+Copy-Item (Join-Path $root "avx-runtime\\build-ci\\$Configuration\\avx1_windows_fixture.exe") $stage
 Copy-Item (Join-Path $root "avx1-sse-poc\\build-ci\\$Configuration\\avx1_sse_poc.exe") $stage
 Copy-Item (Join-Path $root "sde-avx-lab-app\\bin\\SDE AVX Lab.exe") $stage
 Copy-Item (Join-Path $root "README.md") $stage

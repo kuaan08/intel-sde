@@ -27,6 +27,9 @@ The current independent core can:
 - execute supported synthetic guest-memory loads and stores;
 - maintain deterministic guest GPR, vector, and memory state for regression tests;
 - expose shared IR, feature-coverage policy, and translated-block cache prototypes;
+- build a Windows process host and an experimental injected VEH shim for a small AVX1 VEX.128 register-only subset;
+- compile a Windows AVX1 guest application fixture without executing it on a no-AVX host;
+- report deterministic interpreter throughput for regression tracking;
 - build and test on Windows x64 and on an x86-64 no-AVX target through QEMU;
 - verify that generated no-AVX binaries do not contain unsupported V-prefixed host instructions.
 
@@ -210,6 +213,7 @@ THIRD-PARTY-NOTICES.md       Third-party package and license boundaries
 - [Architecture](docs/ARCHITECTURE.md)
 - [Backend strategy](docs/BACKEND-STRATEGY.md)
 - [Next engineering milestones](docs/NEXT-MILESTONES.md)
+- [Windows process runtime](docs/WINDOWS-PROCESS-RUNTIME.md)
 - [Intel SDE public feature map](docs/INTEL-SDE-FEATURE-MAP.md)
 - [Build guide](docs/BUILDING.md)
 - [Runtime documentation](avx-runtime/README.md)
@@ -239,16 +243,19 @@ Use only software and application files that you are authorized to use. No games
 - [x] AVX1-to-SSE register-only proof of concept
 - [x] ModRM/SIB memory operands and x64 addressing decoder
 - [x] Shared IR data model and cache invalidation prototype
-- [ ] Shared IR integration with complete decoded instructions
+- [x] Shared IR integration with complete decoded instructions for linear programs
 - [ ] Basic-block translation and control-flow boundaries
-- [ ] Executable-memory discovery and process-level invalidation
-- [ ] Windows thread, loader, JIT, and exception runtime
+- [x] Executable-region map and write-generation invalidation prototype
+- [x] Windows process host and VEX128 VEH shim prototype
+- [ ] Windows thread, loader, JIT, and complete exception runtime
 - [x] Coverage-gated feature policy prototype
 - [ ] Process-level CPUID/XGETBV virtualization
 - [x] Deterministic AVX1 regression programs
+- [x] Windows AVX1 guest fixture compilation
 - [ ] AVX1 Windows application test suite
 - [ ] AVX2 implementation milestones
 - [x] Windows CI build and release packaging
+- [x] Interpreter benchmark prototype
 - [ ] Performance tuning and benchmark suite
 
 ## Acknowledgements

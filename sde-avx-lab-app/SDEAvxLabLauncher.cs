@@ -253,7 +253,17 @@ namespace SdeAvxLab
             };
             string runtimePath = ""; foreach (string p in candidates) if (File.Exists(p)) { runtimePath = Path.GetFullPath(p); break; }
             if (runtimePath == "") { WriteLog("Runtime próprio selecionado, mas avx_runtime.exe não está compilado."); MessageBox.Show(this, "O runtime próprio ainda precisa ser compilado no Windows. Execute avx-runtime\\Build-Windows.bat e tente novamente.", "Runtime experimental", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-            try { Process proc = Process.Start(new ProcessStartInfo { FileName = runtimePath, Arguments = "--self-test", WorkingDirectory = Path.GetDirectoryName(runtimePath), UseShellExecute = false, CreateNoWindow = false }); if (proc == null) throw new InvalidOperationException("Process.Start returned no process"); WriteLog("Runtime próprio iniciou o self-test. Nenhum jogo foi iniciado. PID=" + proc.Id); status.Text = "Self-test executado"; MessageBox.Show(this, "O runtime próprio é o backend principal, mas ainda está na fase de núcleo/testes e não inicia jogos arbitrários. O self-test AVX1 foi executado.\n\nO Intel SDE permanece disponível somente como fallback externo.", "Backend próprio experimental", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch (Exception ex) { WriteLog("Falha no runtime: " + ex.Message); }
+            string shimPath = Path.Combine(Path.GetDirectoryName(runtimePath), "avx_winshim.dll");
+            bool canLaunchTarget = File.Exists(shimPath) && File.Exists(targetPath.Text);
+            try
+            {
+                string arguments = canLaunchTarget ? "--run-process " + Quote(targetPath.Text) + " " + Quote(shimPath) : "--self-test";
+                ProcessStartInfo start = new ProcessStartInfo { FileName = runtimePath, Arguments = arguments, WorkingDirectory = canLaunchTarget ? Path.GetDirectoryName(targetPath.Text) : Path.GetDirectoryName(runtimePath), UseShellExecute = false, CreateNoWindow = false };
+                Process proc = Process.Start(start); if (proc == null) throw new InvalidOperationException("Process.Start returned no process");
+                if (canLaunchTarget) { WriteLog("Runtime próprio iniciou o processo com shim AVX. PID host=" + proc.Id + " target=" + targetPath.Text); status.Text = "Processo iniciado"; }
+                else { WriteLog("Runtime próprio iniciou o self-test. Shim ou target ausente; nenhum jogo foi iniciado. PID=" + proc.Id); status.Text = "Self-test executado"; MessageBox.Show(this, "O runtime próprio executou o self-test. Para iniciar um EXE pelo backend próprio, o target e avx_winshim.dll precisam estar disponíveis.\n\nO shim atual cobre somente um subconjunto experimental de AVX1 VEX128 register-only. O Intel SDE permanece disponível como fallback.", "Backend próprio experimental", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+            }
+            catch (Exception ex) { WriteLog("Falha no runtime: " + ex.Message); }
         }
 
         private void SaveProfile(object sender, EventArgs e)

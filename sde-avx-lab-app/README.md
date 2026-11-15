@@ -17,7 +17,7 @@ The launcher is an original Windows application for the SDE AVX Lab independent 
 - independent SDE AVX Lab Runtime as the default backend;
 - Intel SDE 9.58 retained only as a separate fallback backend.
 
-The independent SDE AVX Lab backend is the primary development target. It is currently a self-test/core runtime and does not launch arbitrary games yet. Intel SDE 9.58 remains available as a separate fallback for users who need to launch a target while the own process runtime is being completed.
+The independent SDE AVX Lab backend is the primary development target. When `avx_winshim.dll` and a target are available, the launcher starts the target through the experimental Windows process host. The current shim covers only a small VEX.128 register-only AVX1 subset; unsupported instructions can still terminate the target. Intel SDE 9.58 remains available as a separate fallback.
 
 ## Build on Windows
 

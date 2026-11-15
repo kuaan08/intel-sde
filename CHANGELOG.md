@@ -2,6 +2,10 @@
 
 ## Unreleased — Independent runtime milestone
 
+- Integrated decoded linear programs with shared IR and block construction.
+- Added executable-region generation tracking for process/JIT invalidation groundwork.
+- Added a Windows suspended-process host and experimental injected VEX128 VEH shim.
+- Added a Windows AVX1 guest fixture target and an interpreter throughput benchmark.
 - Integrated synthetic guest-memory execution into the independent AVX1 interpreter for supported loads, stores, ModRM/SIB, displacement, and RIP-relative forms.
 - Documented the independent runtime as the primary backend and Intel SDE 9.58 as an isolated optional fallback.
 - Clarified that the independent launcher backend runs a self-test only and does not launch game processes.

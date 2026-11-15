@@ -10,9 +10,12 @@ mkdir -p "$BUILD"
 "$CXX" -std=c++17 -O2 -Wall -Wextra -Wpedantic \
   -march=x86-64 -msse4.2 -mno-avx -mno-avx2 -mno-fma -mno-avx512f \
   -fno-tree-vectorize -fno-lto -I"$ROOT/include" \
-  "$ROOT/src/avx_runtime.cpp" "$ROOT/src/memory_address.cpp" "$ROOT/src/block_cache.cpp" "$ROOT/src/feature_policy.cpp" \
+  "$ROOT/src/avx_runtime.cpp" "$ROOT/src/memory_address.cpp" "$ROOT/src/block_cache.cpp" "$ROOT/src/block_builder.cpp" "$ROOT/src/executable_memory.cpp" "$ROOT/src/feature_policy.cpp" "$ROOT/src/windows_process_host.cpp" \
   -o "$BUILD/avx_runtime"
 "$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --self-test
+benchmark_output="$($QEMU -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --benchmark 10000)"
+grep -q '^benchmark.operations=' <<<"$benchmark_output"
+echo "$benchmark_output"
 "$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --decode "c4 41 34 58 e6"
 "$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --run-file "$ROOT/tests/sample-program.txt"
 printf '# CRLF portability test\r\nc5 f0 58 c2\r\n' > "$BUILD/crlf-program.txt"

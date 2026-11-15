@@ -4,7 +4,10 @@ project(SDE_AVX_Lab_Runtime LANGUAGES CXX)
 set(RUNTIME_CORE_SOURCES
   src/memory_address.cpp
   src/block_cache.cpp
+  src/block_builder.cpp
+  src/executable_memory.cpp
   src/feature_policy.cpp
+  src/windows_process_host.cpp
 )
 
 function(configure_runtime_target target)
@@ -36,4 +39,14 @@ if(BUILD_TESTING)
   configure_runtime_target(runtime_arch_tests)
   add_test(NAME runtime_architecture_tests COMMAND ${SDE_AVX_TEST_PREFIX} $<TARGET_FILE:runtime_arch_tests>)
   add_test(NAME independent_avx_runtime_self_test COMMAND ${SDE_AVX_TEST_PREFIX} $<TARGET_FILE:avx_runtime> --self-test)
+endif()
+
+if(MSVC)
+  add_executable(avx1_windows_fixture tests/windows_avx1_fixture.cpp)
+  target_compile_features(avx1_windows_fixture PRIVATE cxx_std_17)
+  target_compile_options(avx1_windows_fixture PRIVATE /W4 /O2 /arch:AVX)
+
+  add_library(avx_winshim SHARED src/windows_avx_shim.cpp)
+  target_compile_features(avx_winshim PRIVATE cxx_std_17)
+  target_compile_options(avx_winshim PRIVATE /W4 /O2 /arch:SSE2)
 endif()

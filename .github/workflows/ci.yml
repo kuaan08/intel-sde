@@ -100,6 +100,9 @@ jobs:
       - name: Run independent runtime self-test
         run: avx-runtime/build-ci/Release/avx_runtime.exe --self-test
 
+      - name: Build Windows AVX1 application fixture
+        run: cmake --build avx-runtime/build-ci --config Release --target avx1_windows_fixture --parallel
+
       - name: Configure AVX1 to SSE POC
         run: cmake -S avx1-sse-poc -B avx1-sse-poc/build-ci -A x64
 
@@ -114,6 +117,8 @@ jobs:
         shell: pwsh
         run: |
           if (!(Test-Path 'avx-runtime/build-ci/Release/avx_runtime.exe')) { throw 'Runtime executable missing' }
+          if (!(Test-Path 'avx-runtime/build-ci/Release/avx1_windows_fixture.exe')) { throw 'Windows AVX1 fixture missing' }
+          if (!(Test-Path 'avx-runtime/build-ci/Release/avx_winshim.dll')) { throw 'Windows AVX shim missing' }
           if (!(Test-Path 'sde-avx-lab-app/bin/SDE AVX Lab.exe')) { throw 'Launcher executable missing' }
 
       - name: Package Windows x64 artifacts

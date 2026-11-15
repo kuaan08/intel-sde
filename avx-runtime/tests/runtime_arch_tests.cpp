@@ -1,4 +1,6 @@
 #include "avx_runtime/block_cache.hpp"
+#include "avx_runtime/block_builder.hpp"
+#include "avx_runtime/executable_memory.hpp"
 #include "avx_runtime/feature_policy.hpp"
 #include "avx_runtime/memory_address.hpp"
 #include <cassert>
@@ -25,5 +27,20 @@ int main() {
     partial.avx1_memory = true; partial.avx2 = true;
     const GuestFeatures complete = derive_guest_features(partial);
     assert(complete.avx && complete.avx2 && complete.osxsave);
-    std::cout << "PASS: memory addressing, IR cache invalidation, and feature gating.\n";
+
+    BasicBlockBuilder builder(0x2000);
+    IRInstruction first_ir; first_ir.guest_address = 0x2000; first_ir.length = 4;
+    IRInstruction second_ir; second_ir.guest_address = 0x2004; second_ir.length = 3;
+    builder.append(first_ir); builder.append(second_ir); builder.terminate(BlockTerminator::DirectBranch);
+    assert(builder.block().instructions.size() == 2 && builder.block().terminator == BlockTerminator::DirectBranch);
+
+    ExecutableMemoryMap executable;
+    executable.register_region(0x4000, 0x1000);
+    assert(executable.find(0x4100) != nullptr);
+    const std::uint64_t generation = executable.find(0x4100)->generation;
+    executable.invalidate_write(0x47f0, 0x40);
+    assert(executable.find(0x4100)->generation == generation + 1);
+    executable.unregister_region(0x4000);
+    assert(executable.find(0x4100) == nullptr);
+    std::cout << "PASS: memory addressing, IR blocks, executable-memory invalidation, cache invalidation, and feature gating.\n";
 }

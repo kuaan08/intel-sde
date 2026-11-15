@@ -1,7 +1,12 @@
 // SDE AVX Lab — independent AVX1 interpreter with register and memory operands.
 // No Intel SDE code is used here. The host backend is scalar C++ only.
 #include "avx_runtime/memory_address.hpp"
+#include "avx_runtime/block_builder.hpp"
+#include "avx_runtime/block_cache.hpp"
+#include "avx_runtime/ir.hpp"
+#include "avx_runtime/windows_process_host.hpp"
 #include <array>
+#include <chrono>
 #include <cctype>
 #include <cstdint>
 #include <cstring>
@@ -154,12 +159,34 @@ static void seed(MachineState& state) {
 }
 static std::string state_digest(const VectorState& s) { std::uint32_t hash = 2166136261u; for (const auto& r : s.ymm) for (std::uint8_t b : r) { hash ^= b; hash *= 16777619u; } std::ostringstream out; out << std::hex << std::setfill('0') << std::setw(8) << hash; return out.str(); }
 
+static IROpcode to_ir_opcode(Op op) {
+    switch (op) { case Op::AddPS: return IROpcode::AddPS; case Op::SubPS: return IROpcode::SubPS; case Op::MulPS: return IROpcode::MulPS; case Op::DivPS: return IROpcode::DivPS; case Op::XorPS: return IROpcode::XorPS; case Op::AndPS: return IROpcode::AndPS; case Op::OrPS: return IROpcode::OrPS; case Op::Move: return IROpcode::Move; case Op::ZeroUpper: return IROpcode::ZeroUpper; default: return IROpcode::Unsupported; }
+}
+
+static IRInstruction to_ir(const Decoded& decoded, std::uint64_t guest_address, std::uint8_t length) {
+    IRInstruction instruction; instruction.opcode = to_ir_opcode(decoded.op); instruction.dst = static_cast<std::uint8_t>(decoded.dst); instruction.src1 = static_cast<std::uint8_t>(decoded.src1); instruction.src2 = static_cast<std::uint8_t>(decoded.src2); instruction.vector_bits = static_cast<std::uint16_t>(decoded.bits); instruction.guest_address = guest_address; instruction.length = length; instruction.has_memory_operand = decoded.memory; instruction.memory = decoded.memory_operand; return instruction;
+}
+
 static unsigned run_file(const std::string& path) {
     std::ifstream in(path); if (!in) fail("cannot open program file: " + path);
-    MachineState state; seed(state); std::string line; unsigned count = 0;
-    while (std::getline(in, line)) { std::string trimmed; for (char c : line) if (c != '#') trimmed += c; else break; bool has_hex = false; for (char c : trimmed) if (std::isxdigit(static_cast<unsigned char>(c))) { has_hex = true; break; } if (!has_hex) continue; execute(decode(parse_hex(trimmed)), state); ++count; }
+    MachineState state; seed(state); BasicBlockBuilder builder(0x1000); BlockCache cache; std::vector<std::uint8_t> source_bytes; std::string line; unsigned count = 0; std::uint64_t guest_address = 0x1000;
+    while (std::getline(in, line)) { std::string trimmed; for (char c : line) if (c != '#') trimmed += c; else break; bool has_hex = false; for (char c : trimmed) if (std::isxdigit(static_cast<unsigned char>(c))) { has_hex = true; break; } if (!has_hex) continue; const std::vector<std::uint8_t> bytes = parse_hex(trimmed); const Decoded decoded = decode(bytes); builder.append(to_ir(decoded, guest_address, static_cast<std::uint8_t>(bytes.size()))); source_bytes.insert(source_bytes.end(), bytes.begin(), bytes.end()); execute(decoded, state); guest_address += bytes.size(); ++count; }
+    IRBlock block = builder.finish(); block.generation = 1; cache.insert(block, source_bytes);
     std::cout << "PASS: executed " << count << " independent VEX instructions from " << path << "\n";
+    std::cout << "ir_block.instructions=" << block.instructions.size() << " cache_entries=" << cache.size() << "\n";
     std::cout << "state_digest=" << state_digest(state.vectors) << " xmm0="; for (unsigned i = 0; i < 4; ++i) { if (i) std::cout << ','; std::cout << f32(state.vectors.ymm[0].data() + i * 4); } std::cout << "\n"; return count;
+}
+
+static void benchmark(unsigned iterations) {
+    if (iterations == 0) fail("benchmark iterations must be non-zero");
+    MachineState state; seed(state);
+    const Decoded register_add = decode(parse_hex("c5 f0 58 c2"));
+    const Decoded memory_add = decode(parse_hex("c5 f0 58 00"));
+    const auto started = std::chrono::steady_clock::now();
+    for (unsigned i = 0; i < iterations; ++i) { execute(register_add, state); execute(memory_add, state); }
+    const auto elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    const double operations = static_cast<double>(iterations) * 2.0;
+    std::cout << "benchmark.operations=" << static_cast<std::uint64_t>(operations) << " seconds=" << elapsed << " ops_per_second=" << (operations / elapsed) << " digest=" << state_digest(state.vectors) << "\n";
 }
 
 static void self_test() {
@@ -175,8 +202,10 @@ static void self_test() {
 int main(int argc, char** argv) {
     try {
         if (argc == 2 && std::string(argv[1]) == "--self-test") { avxlab::self_test(); return 0; }
+        if (argc == 3 && std::string(argv[1]) == "--benchmark") { avxlab::benchmark(static_cast<unsigned>(std::stoul(argv[2]))); return 0; }
+        if (argc == 4 && std::string(argv[1]) == "--run-process") { const int result = avxlab::run_process_with_shim(argv[2], argv[3]); if (result < 0) { std::cerr << "FAIL: Windows process host error " << result << "\n"; return 1; } return result; }
         if (argc == 3 && std::string(argv[1]) == "--decode") { avxlab::Decoded d = avxlab::decode(avxlab::parse_hex(argv[2])); std::cout << "decoded bits=" << d.bits << " dst=ymm" << d.dst << " src1=ymm" << d.src1; if (d.memory) std::cout << " src2=" << avxlab::format_memory_operand(d.memory_operand); else std::cout << " src2=ymm" << d.src2; std::cout << " memory=" << (d.memory ? "yes" : "no") << "\n"; return 0; }
         if (argc == 3 && std::string(argv[1]) == "--run-file") { avxlab::run_file(argv[2]); return 0; }
-        std::cerr << "usage: avx_runtime --self-test | --decode \"c5 f0 58 c2\" | --run-file program.txt\n"; return 64;
+        std::cerr << "usage: avx_runtime --self-test | --decode \"c5 f0 58 c2\" | --run-file program.txt | --benchmark iterations | --run-process target.exe shim.dll\n"; return 64;
     } catch (const std::exception& e) { std::cerr << "FAIL: " << e.what() << '\n'; return 1; }
 }
