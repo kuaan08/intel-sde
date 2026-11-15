@@ -2,6 +2,9 @@
 
 ## Unreleased — Independent runtime milestone
 
+- Reorganized project documentation under `docs/`, added a canonical documentation index, and moved the external Windows package manifest out of the repository root.
+- Renamed and translated author-maintained Portuguese documents to English while preserving historical feasibility and research records under `docs/legacy/`.
+- Clarified the boundary between project documentation, test fixtures, and unchanged third-party package files.
 - Integrated decoded linear programs with shared IR and block construction.
 - Added executable-region generation tracking for process/JIT invalidation groundwork.
 - Added a Windows suspended-process host and experimental injected VEX128 VEH shim.

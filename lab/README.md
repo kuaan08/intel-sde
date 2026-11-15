@@ -1,55 +1,61 @@
-# SDE AVX Lab — integração com o Intel SDE
+# External Package Audit Lab
 
-O repositório agora mantém duas distribuições separadas do kit Intel SDE:
+The `lab/` directory contains non-invasive audit tools for the external Intel SDE packages preserved in this repository.
 
-- `windows-9.58/`: distribuição oficial Windows `sde-external-9.58.0-2025-06-16-win.tar.xz`, baixada do espelho oficial da Intel e validada pelo SHA-256 publicado pela Intel.
-- `linux-9.14/`: kit Linux 9.14.0 preservado como referência histórica; ele não é mais a raiz principal do repositório.
+## Preserved packages
 
-Os binários, bibliotecas, fontes Pin, arquivos `.sig` e licenças Intel permanecem sem alteração. Os arquivos em `lab/` são adições do SDE AVX Lab e não modificam nem ampliam a licença do kit.
+- `windows-9.58/` — official Windows SDE 9.58 package used as an external comparison reference.
+- `linux-9.14/` — historical Linux SDE 9.14 package retained for reference; it is not the project's primary backend.
 
-## Auditoria
+The binaries, libraries, Pin sources, signature files, manifests, and Intel licenses remain unmodified. Files under `lab/` are original SDE AVX Lab additions and do not change, extend, or replace the package licenses.
 
-A auditoria padrão aponta para Windows 9.58:
+## Audit commands
+
+Audit the default Windows package:
 
 ```bash
 ./lab/sde-kit-audit.sh | tee lab/sde-kit-audit.log
 ```
 
-Para auditar a referência Linux preservada:
+Audit the preserved Linux reference:
 
 ```bash
 KIT_ROOT="$PWD/linux-9.14" ./lab/sde-kit-audit.sh
 ```
 
-No sandbox ARM64, a auditoria executa apenas metadados das ferramentas Linux sob QEMU. Ela não tenta executar `.exe` Windows. Em Windows x64, a verificação deve ser repetida nativamente com `windows-9.58\\sde.exe -version`.
-
-## O que a versão Windows contém
-
-A distribuição Windows inclui `sde.exe`, `xed.exe`, `intel64/pin.exe`, `intel64/sde-mix-mt.dll`, DLLs de suporte, documentação HTML, perfis CPUID e as pastas `ia32` e `intel64`. A versão identificada no binário é **9.58.0 external**. Os perfis incluem, entre outros, `snb`, `ivb`, `hsw`, `skl`, `glm`, `tnt`, `adl`, `tgl`, `spr` e `future`.
-
-O SDE oferece knobs de emulação e análise, como seleção de chip, CPUID emulado, `-mix`, detecção AVX/SSE e opções de precisão/velocidade para algumas famílias de instruções. Esses modos são recursos do SDE Intel, não um backend AVX→SSE do SDE AVX Lab. A POC independente permanece necessária para gerar código SSE executável no Celeron N5100.
-
-## Organização Windows recomendada
-
-No computador Windows 10 x64 do laboratório, extraia a distribuição oficial preservando toda a estrutura. Use a variante de 64 bits para aplicações x64:
+On the ARM64 development sandbox, the audit reads tool metadata through QEMU and does not execute Windows `.exe` files. On native Windows x64, repeat the version check with:
 
 ```bat
-windows-9.58\\sde.exe -version
-windows-9.58\\sde.exe -snb -- "C:\\caminho\\para\\programa.exe"
+windows-9.58\sde.exe -version
 ```
 
-Para o Xenia, o perfil `-snb` continua sendo a primeira referência porque corresponde ao experimento registrado no handoff. O resultado deve ser anotado separadamente: inicialização, menu, jogo carregado, FPS, erros e logs. Abrir a janela do processo não prova compatibilidade de gameplay.
+## Windows package reference
 
-Antes do teste, mantenha `windows-9.58` intacta, não misture DLLs com outra versão, confira o Visual C++ Redistributable exigido pela documentação e preserve os logs gerados pelo SDE. A versão Windows 9.58 é a referência correta para o teste Windows 10 do laboratório; o kit Linux 9.14 não deve ser usado para esse teste.
+The Windows package contains `sde.exe`, `xed.exe`, `intel64/pin.exe`, `intel64/sde-mix-mt.dll`, support DLLs, HTML documentation, CPUID profiles, and the `ia32` and `intel64` trees. The identified binary version is **9.58.0 external**. Profiles include `snb`, `ivb`, `hsw`, `skl`, `glm`, `tnt`, `adl`, `tgl`, `spr`, and `future`.
 
-## Sobre “versão otimizada”
+Intel SDE provides chip selection, emulated CPUID, `-mix`, AVX/SSE detection, and analysis or precision/throughput controls for selected instruction families. These are Intel SDE features, not an AVX-to-SSE backend of SDE AVX Lab. The independent runtime remains necessary to generate host-compatible code.
 
-O SDE não fornece uma versão otimizada que transforme automaticamente todas as instruções AVX em SSE nativo para obter FPS de jogo. O que existe são builds por plataforma/bitness, perfis de chip emulados, knobs de emulação e ferramentas de análise. A escolha recomendada para o computador de referência é o `sde.exe`/`intel64` da distribuição Windows e o perfil de CPU mínimo necessário, começando por `-snb`. FMA, AVX2 ou perfis mais novos só devem ser usados quando o programa exigir e depois de medir o custo.
+## Reference Windows command
 
-## Engenharia reversa
+On the Windows 10 x64 laboratory machine, extract the official package without changing its structure and use the 64-bit variant for x64 applications:
 
-Não será feita engenharia reversa, descompilação, desmontagem ou patching dos binários Intel. A licença incluída no kit proíbe essas ações. O trabalho permitido e útil para o projeto é inspeção de documentação, hashes, metadados, perfis CPUID, testes externos e desenvolvimento de um tradutor independente. A integração com o SDE ocorre como referência/oráculo experimental, nunca como código proprietário modificado.
+```bat
+windows-9.58\sde.exe -version
+windows-9.58\sde.exe -snb -- "C:\path\to\program.exe"
+```
 
-## Próxima etapa
+The `-snb` profile is the first Xenia comparison profile because it matches the recorded handoff experiment. Record startup, menus, loaded content, frame rate, errors, and logs separately. Opening a process window is not evidence of gameplay compatibility.
 
-No Windows x64 nativo, executar primeiro `sde.exe -version`, guardar `-help`/`-help-long` e repetir o teste `-snb` do handoff. Em seguida, usar `-mix` e o relatório AVX/SSE para descobrir quais instruções o aplicativo realmente usa. O cliente Pin/SDE de observação será compilado separadamente e só depois será comparado à POC AVX1→SSE do projeto principal.
+Keep `windows-9.58` intact, do not mix DLLs from another version, follow the package documentation for the required Visual C++ runtime, and preserve generated logs. The Windows 9.58 package is the relevant external reference for the Windows 10 experiment; the Linux 9.14 package is not interchangeable with it.
+
+## No automatic AVX-to-SSE optimization claim
+
+Intel SDE does not provide a general switch that converts every AVX instruction into native SSE for game FPS. It provides platform/bitness builds, emulated CPU profiles, emulation controls, and analysis tools. For the reference computer, use the Windows `intel64` package and the minimum required CPU profile, starting with `-snb`. Enable FMA, AVX2, or newer profiles only when the target requires them and after measuring the effect.
+
+## Reverse-engineering boundary
+
+This project does not reverse-engineer, decompile, disassemble, patch, or copy implementation code from Intel binaries. The useful and permitted work is documentation review, hashes, metadata, CPUID profiles, authorized external tests, and development of an independent translator. Intel SDE remains an experimental reference/oracle, never modified proprietary implementation.
+
+## Suggested next audit
+
+On native Windows x64, record `sde.exe -version`, `-help`, and `-help-long`, then repeat the handoff `-snb` test. Use `-mix` and AVX/SSE reports to identify the target's instruction families. Build any observation client separately and compare its results with the independent AVX1-to-SSE proof of concept.

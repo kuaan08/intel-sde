@@ -1,40 +1,41 @@
-# SDE AVX Lab — POC AVX1 → SSE
+# SDE AVX Lab — AVX1-to-SSE Proof of Concept
 
-**Status:** prova de conceito experimental, não é runtime de compatibilidade de aplicações.
+**Status:** experimental correctness proof of concept; not an application compatibility runtime.
 
-O protótipo recebe uma única instrução VEX, decodifica uma forma estreita de AVX1 e gera bytes x86-64 que usam somente instruções SSE legacy. Um estado de teste armazena 16 registradores YMM lógicos como dois blocos de 128 bits em memória; o código gerado usa XMM0/XMM1 temporários, carrega operandos, executa a operação SSE e grava o resultado.
+This prototype accepts one VEX instruction, decodes a deliberately narrow AVX1 form, and emits x86-64 bytes that use legacy SSE instructions only. A test state stores 16 logical YMM registers as pairs of 128-bit halves. The generated code uses XMM temporaries, performs the legacy SSE operation, and writes the result back to the logical state.
 
-## Subconjunto implementado
+## Implemented subset
 
-- `VADDPS`, `VSUBPS`, `VMULPS`, `VDIVPS`, `VXORPS`, `VANDPS` e `VORPS` nas formas VEX.128 e VEX.256, somente registrador-registrador.
-- `VMOVUPS` e `VMOVAPS` nas formas registrador-registrador VEX.128/VEX.256. Formas de load/store com memória ainda não são aceitas.
-- `VZEROUPPER`, zerando os 128 bits superiores dos 16 registradores YMM virtuais.
-- Prefixos VEX2/VEX3, incluindo identificadores de registrador vetorial 8–15 nas formas aceitas.
+The current prototype covers packed-single `VADDPS`, `VSUBPS`, `VMULPS`, `VDIVPS`, `VXORPS`, `VANDPS`, and `VORPS` in VEX.128 and VEX.256 register-register forms. It also covers register-register `VMOVUPS` and `VMOVAPS`, `VZEROUPPER`, VEX2/VEX3 prefixes, and vector register numbers 8–15 in the accepted forms.
 
-Formas não aceitas são rejeitadas explicitamente. Não há suporte a AVX2, memória, instruções escalares, saltos, CPUID virtualizado, XGETBV/XSAVE, exceções/flags arquiteturais, threads, DLLs, código JIT de aplicação, processo-filho ou integração DynamoRIO.
+Unsupported forms are rejected explicitly. AVX2, memory operands, scalar instructions, branches, CPUID virtualization, XGETBV/XSAVE, architectural flags and exceptions, application threads, DLL lifecycle, application JIT code, child processes, and DynamoRIO integration are outside this proof of concept.
 
-## Tradução e estado
+## Translation and state
 
-O backend atual emite `MOVUPS`, operações packed-single legacy (`ADDPS`, `SUBPS`, `MULPS`, `DIVPS`), operações lógicas legacy e `RET`. Uma operação VEX.256 é dividida em duas operações XMM independentes. Para uma escrita VEX.128, os 128 bits altos do YMM de destino são zerados, conforme a semântica AVX; para `VZEROUPPER`, os altos de todos os 16 YMMs lógicos são zerados. O tradutor não informa CPUID ao software e não intercepta processos.
+The backend emits `MOVUPS`, packed-single legacy operations such as `ADDPS`, `SUBPS`, `MULPS`, and `DIVPS`, legacy logical operations, and `RET`. A VEX.256 operation is split into two independent XMM operations. A VEX.128 write clears the upper 128 bits of the destination YMM, as required by AVX semantics. `VZEROUPPER` clears the upper halves of all 16 logical YMM registers.
 
-## Teste no ambiente ARM64
+The translator does not advertise AVX through CPUID and does not intercept application processes.
 
-O sandbox de desenvolvimento é Linux ARM64, portanto não executa instruções x86 nativamente. O script cruza o build para x86-64 e roda o binário com QEMU user-mode/Tiny Code Generator, configurado para expor SSE4.2 e ocultar AVX/AVX2/XSAVE. O próprio harness verifica CPUID antes dos casos. O teste de QEMU é uma validação funcional do subset sob emulação x86 sem AVX, não uma medição de desempenho nem um teste no Celeron N5100/Windows 10.
+## ARM64 development validation
 
-Dependências no Ubuntu: `g++-x86-64-linux-gnu`, `binutils-x86-64-linux-gnu` e `qemu-user`.
+The development sandbox is Linux ARM64 and cannot execute x86 instructions natively. The test script cross-compiles the harness for x86-64 and runs it with QEMU user-mode/Tiny Code Generator configured to expose SSE4.2 while hiding AVX, AVX2, and XSAVE. The harness checks CPUID before running the cases.
+
+This is a functional validation of the covered subset under x86 emulation without AVX. It is not a performance measurement and is not native validation on the Celeron N5100 or Windows 10.
+
+Required Ubuntu packages are `g++-x86-64-linux-gnu`, `binutils-x86-64-linux-gnu`, and `qemu-user`.
 
 ```bash
 ./tests/run-tests.sh
 ```
 
-O script grava `build/generated_addps256_sse.bin` e sua desmontagem em `build/generated_addps256_sse.disasm`, além da desmontagem do harness. A geração de bytes executáveis usa a sequência W^X: páginas são graváveis durante a cópia e tornam-se executáveis em seguida. Windows x64 usa RCX como primeiro argumento; SysV AMD64 usa RDI.
+The script writes `build/generated_addps256_sse.bin`, its disassembly, and the harness disassembly. Generated executable memory follows a W^X transition: pages are writable during emission and executable afterward. Windows x64 uses RCX as the first argument; SysV AMD64 uses RDI.
 
-## Validade e próximos gates
+## Validation boundary
 
-Os testes comparam o estado dos vetores com uma referência escalar para valores controlados e conferem aliasing de registradores, largura 128/256, registradores altos, cópias e `VZEROUPPER`. Também verificam que formas não suportadas são recusadas e que o código gerado/harness não contém mnemônicos AVX.
+The tests compare vector state with a scalar reference for controlled values and cover register aliasing, 128/256-bit widths, high registers, copies, and `VZEROUPPER`. They also verify that unsupported forms are rejected and that generated code contains no AVX mnemonics.
 
-Isso **não** estabelece equivalência completa da ISA: MXCSR, NaNs, subnormais, exceções FP, arredondamento alternativo, falhas de acesso à memória e todas as formas de instrução ainda precisam de testes dedicados. Tampouco demonstra que DynamoRIO possa carregar AVX em host sem AVX. Antes de expor qualquer capacidade AVX a uma aplicação, seria necessário integrar a transformação em um runtime DBI, emular coerentemente a detecção/estado de CPU, instrumentar todo código executado (inclusive JIT e processos filhos), rejeitar instruções fora da cobertura e passar testes diferenciais e de exceções.
+This does **not** establish complete ISA equivalence. MXCSR, NaNs, subnormals, alternate rounding, floating-point exceptions, memory faults, and all instruction forms require dedicated tests. It also does not demonstrate that DynamoRIO can load arbitrary AVX code on a host without AVX. Before exposing any AVX capability to an application, the project must integrate transformation into a DBI/runtime, virtualize CPU detection coherently, instrument all executed code including JIT and child processes, reject unsupported instructions diagnostically, and pass differential and exception tests.
 
-## Arquitetura pesquisada (decisão provisória)
+## Researched architecture
 
-DynamoRIO é o candidato principal de runtime DBI/code-cache para protótipo Windows x64, usando sua IR x86 ou o decoder próprio. Intel XED pode apoiar ferramentas e testes offline, mas não fornece um runtime. Intel SDE deve permanecer como referência externa permitida pelo acordo do kit, não como componente a modificar ou redistribuir. QEMU TCG permanece uma referência de arquitetura de tradução; sua emulação de sistema não equivale a um shim para processos Windows nativos. A recomendação é provisória até provar execução de blocos AVX em host sem AVX sob o framework escolhido.
+DynamoRIO is the provisional candidate for a Windows x64 DBI/code-cache layer, using its x86 IR or the project's decoder. Intel XED may support offline tools and tests but does not provide a runtime. Intel SDE remains an external comparison tool and is not modified or redistributed as project implementation. QEMU TCG remains a translation-architecture reference; its system emulation is not equivalent to a native Windows process shim.

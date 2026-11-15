@@ -1,4 +1,4 @@
-SDE AVX Lab — official Intel Windows package record
+SDE AVX Lab — Official Intel Windows Package Record
 
 Source URL:
 https://downloadmirror.intel.com/859732/sde-external-9.58.0-2025-06-16-win.tar.xz
@@ -17,10 +17,10 @@ windows-9.58/
 
 Observed metadata after extraction:
 - sde.exe: Intel Software Development Emulator 9.58.0 external (0)
-- target layouts: ia32 and intel64
-- package includes documentation, licenses, CPUID profiles and Pin/SDE support files
+- Target layouts: ia32 and intel64
+- Package includes documentation, licenses, CPUID profiles and Pin/SDE support files
 
-Extracted principal-file SHA-256:
+SHA-256 hashes of selected extracted files:
 f309b90a75697296bd7e92ade119bf0d86f3e03badf3594f45d1ee8d35c11426  windows-9.58/sde.exe
 b3aebe15080e689f9aced153eeb1df625d848c4c6ad2ca95516dfc9519d5eb84  windows-9.58/xed.exe
 4d534ce7e9d2ba445636120eecc8819c70d67d0d7f59d70cd9e89adb272579e3  windows-9.58/intel64/pin.exe

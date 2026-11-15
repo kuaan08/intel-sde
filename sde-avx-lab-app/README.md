@@ -61,7 +61,7 @@ The launcher automatically searches for `avx_runtime.exe` in `avx-runtime\build-
 1. Keep the official package at `..\windows-9.58` in this repository checkout or select `sde.exe` manually.
 2. Start the launcher.
 3. Select the target executable, such as `xenia_canary.exe`.
-4. Select **Intel SDE 9.58 (fallback externo)** only if the own backend cannot yet launch the target.
+4. Select **Intel SDE 9.58 (external fallback)** only if the independent backend cannot yet launch the target.
 5. Start with the `-snb` profile.
 6. Keep `-emu-xinuse 0` disabled initially.
 7. Enable `-mix` only when instruction telemetry is required.

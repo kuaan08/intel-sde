@@ -1,57 +1,57 @@
-# Estudo: por que o Xenia exige AVX
+# Xenia CPU Feature Study
 
-## Conclusão
+## Conclusion
 
-Anunciar AVX via `CPUID` pode remover a primeira mensagem de erro, mas não torna o Xenia funcional. O código público do Xenia Canary confirma que existem pelo menos três gates independentes: uma verificação estática de CPU antes da inicialização, uma segunda verificação no backend x64 e emissão de código host JIT por Xbyak, com uso de AVX e, quando disponível, AVX2/FMA e outras extensões.
+Advertising AVX through `CPUID` may remove the first startup error, but it does not make Xenia functional. The public Xenia Canary source shows at least three independent gates: a startup CPU check, a second check in the x64 backend, and host JIT code emitted by Xbyak using AVX and, when available, AVX2/FMA and other extensions.
 
-Por isso, o SDE AVX Lab teria de traduzir o código x64 gerado pelo próprio Xenia, além de lidar com as instruções presentes no executável e com páginas de código JIT.
+SDE AVX Lab would therefore have to translate Xenia's generated x64 code, in addition to instructions present in the executable and code pages created by the JIT.
 
-## Evidência no código do Xenia
+## Evidence in the Xenia source
 
-No arquivo `src/xenia/base/main_init_win.cc`, o Xenia cria `Xbyak::util::Cpu` antes da inicialização e encerra o processo se `cpu.has(Xbyak::util::Cpu::tAVX)` for falso. A mensagem exibida é:
+`src/xenia/base/main_init_win.cc` creates `Xbyak::util::Cpu` before initialization and exits when `cpu.has(Xbyak::util::Cpu::tAVX)` is false:
 
 ```text
 Your CPU does not support AVX, which is required by Xenia.
 ```
 
-Fonte: [main_init_win.cc](https://github.com/xenia-canary/xenia-canary/blob/master/src/xenia/base/main_init_win.cc)
+Source: [main_init_win.cc](https://github.com/xenia-canary/xenia-canary/blob/master/src/xenia/base/main_init_win.cc)
 
-No arquivo `src/xenia/cpu/backend/x64/x64_backend.cc`, `X64Backend::Initialize` verifica AVX novamente. Quando a verificação falha, registra:
+`src/xenia/cpu/backend/x64/x64_backend.cc` checks AVX again in `X64Backend::Initialize` and logs the following when the check fails:
 
 ```text
 This CPU does not support AVX. The emulator will now crash.
 ```
 
-Fonte: [x64_backend.cc](https://github.com/xenia-canary/xenia-canary/blob/master/src/xenia/cpu/backend/x64/x64_backend.cc)
+Source: [x64_backend.cc](https://github.com/xenia-canary/xenia-canary/blob/master/src/xenia/cpu/backend/x64/x64_backend.cc)
 
-No arquivo `src/xenia/cpu/backend/x64/x64_emitter.cc`, o construtor de `X64Emitter` também encerra com erro se AVX não estiver disponível. Esse componente é o emissor JIT do backend x64, portanto a exigência não está limitada ao código de startup.
+The `X64Emitter` constructor in `src/xenia/cpu/backend/x64/x64_emitter.cc` also fails when AVX is unavailable. This is the x64 JIT emitter, so the requirement is not limited to startup code.
 
-Fonte: [x64_emitter.cc](https://github.com/xenia-canary/xenia-canary/blob/master/src/xenia/cpu/backend/x64/x64_emitter.cc)
+Source: [x64_emitter.cc](https://github.com/xenia-canary/xenia-canary/blob/master/src/xenia/cpu/backend/x64/x64_emitter.cc)
 
-No arquivo `src/xenia/base/platform_amd64.cc`, o Xenia detecta recursos adicionais e cria flags de emissão para AVX2, FMA, BMI, MOVBE, GFNI e AVX-512. A flag `x64_extension_mask` documenta que AVX1 é o piso e que AVX2/FMA são habilitados quando detectados.
+`src/xenia/base/platform_amd64.cc` detects additional features and creates emission flags for AVX2, FMA, BMI, MOVBE, GFNI, and AVX-512. The `x64_extension_mask` documents AVX1 as the floor and enables AVX2/FMA when detected.
 
-Fonte: [platform_amd64.cc](https://github.com/xenia-canary/xenia-canary/blob/master/src/xenia/base/platform_amd64.cc)
+Source: [platform_amd64.cc](https://github.com/xenia-canary/xenia-canary/blob/master/src/xenia/base/platform_amd64.cc)
 
-## O que o binário analisado mostrou
+## Evidence from the analyzed binary
 
-O release `9eedf60` analisado contém `CPUID` e `XGETBV`, mensagens explícitas de recusa de AVX e milhares de instruções VEX. O inventário inclui operações escalares, packed-single, conversões, comparações, instruções inteiras AVX2, shuffles, packs, blends, `VEXTRACTF128`, `VINSERTF128` e operações de memória.
+The analyzed `9eedf60` release contains `CPUID`, `XGETBV`, explicit AVX rejection messages, and thousands of VEX instructions. The inventory includes scalar and packed-single operations, conversions, comparisons, AVX2 integer operations, shuffles, packs, blends, `VEXTRACTF128`, `VINSERTF128`, and memory operations.
 
-O perfil estatístico está em [XENIA-CANARY-AVX-INSTRUCTION-PROFILE-2026-11-15.md](XENIA-CANARY-AVX-INSTRUCTION-PROFILE-2026-11-15.md).
+The detailed inventory is maintained in the project research records and must be treated as a release-specific static profile, not a complete runtime coverage claim.
 
-## Por que não basta alterar CPUID
+## Why changing CPUID is insufficient
 
-Se somente o bit AVX for anunciado, o Xenia passa o primeiro gate, mas o Xbyak ainda produzirá instruções AVX para o código host JIT. Em um Celeron N5100 sem AVX, uma dessas instruções pode causar `STATUS_ILLEGAL_INSTRUCTION` assim que o bloco for executado.
+If only the AVX bit is advertised, Xenia may pass the first gate while Xbyak still emits AVX instructions for host JIT blocks. On a Celeron N5100 without AVX, one of those instructions can raise `STATUS_ILLEGAL_INSTRUCTION` as soon as the block executes.
 
-Se também anunciarmos AVX2 ou FMA sem implementá-los, o Xenia poderá selecionar caminhos ainda mais difíceis. A virtualização correta precisa ser condicionada à cobertura efetiva do backend, incluindo `CPUID`, `XGETBV`, estado XMM/YMM, páginas executáveis, threads, exceções e código JIT.
+Advertising AVX2 or FMA without implementing them can select even more unsupported paths. Correct virtualization must be conditioned on actual backend coverage, including `CPUID`, `XGETBV`, XMM/YMM state, executable pages, threads, exceptions, and JIT code.
 
-## Estratégia correta para o SDE AVX Lab
+## Correct SDE AVX Lab strategy
 
-O primeiro alvo não deve ser “enganar” o Xenia, e sim construir o dispatcher que recebe os blocos x64 executados pelo processo, identifica VEX/EVEX, traduz as famílias cobertas para SSE/scalar e mantém o estado guest por thread.
+The first target should not be to trick Xenia. It should be to build a dispatcher that receives executed x64 blocks, identifies VEX/EVEX instructions, translates covered families to SSE/scalar sequences, and maintains guest state per thread.
 
-A ordem de cobertura para o Xenia deve começar por `VMOV*`, `VADDSS`, `VSUBSS`, `VMULSS`, `VDIVSS`, conversões, comparações e `VZEROUPPER`. Depois devem vir as famílias inteiras AVX2 mais frequentes, como `VPADDD`, `VPAND`, `VPOR`, `VPXOR`, shifts, packs, unpack e `VPSHUFB`. Só depois faz sentido habilitar AVX no processo e medir qual caminho adicional do JIT é alcançado.
+For Xenia, coverage should begin with `VMOV*`, `VADDSS`, `VSUBSS`, `VMULSS`, `VDIVSS`, conversions, comparisons, and `VZEROUPPER`. Frequently used AVX2 integer families such as `VPADDD`, `VPAND`, `VPOR`, `VPXOR`, shifts, packs, unpack operations, and `VPSHUFB` belong to later milestones. Only after this coverage exists should AVX be exposed to the process and the next JIT path measured.
 
-O requisito oficial do Xenia também confirma que AVX ou AVX2 é requisito mínimo e que o programa verifica CPU e GPU no startup: [Xenia Canary Quickstart](https://github.com/xenia-canary/xenia-canary/wiki/Quickstart). O FAQ oficial informa que a mensagem de CPU sem AVX significa que o processador não atende aos requisitos: [Xenia Canary FAQ](https://github.com/xenia-canary/xenia-canary/wiki/FAQ).
+The official [Xenia Canary Quickstart](https://github.com/xenia-canary/xenia-canary/wiki/Quickstart) lists AVX or AVX2 as a minimum CPU requirement. The [FAQ](https://github.com/xenia-canary/xenia-canary/wiki/FAQ) explains that the no-AVX message means the processor does not meet that requirement.
 
-## Estado atual
+## Current project state
 
-O SDE AVX Lab agora possui um primeiro slice de `VMOVSS`, `VADDSS`, `VSUBSS`, `VMULSS` e `VDIVSS`, mas ainda não possui o dispatcher Windows geral necessário para interceptar o JIT do Xenia. Portanto, AVX continua corretamente fechado por padrão.
+SDE AVX Lab has an initial slice of `VMOVSS`, `VADDSS`, `VSUBSS`, `VMULSS`, and `VDIVSS`, but it does not yet have the general Windows dispatcher required to intercept Xenia's JIT. AVX therefore remains closed by default.
