@@ -2,6 +2,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -59,7 +60,13 @@ int run_process_with_shim(const std::string& target_path, const std::string& shi
     }
     HMODULE kernel = GetModuleHandleW(L"kernel32.dll");
     FARPROC load_library = kernel ? GetProcAddress(kernel, "LoadLibraryW") : nullptr;
-    HANDLE injector = load_library ? CreateRemoteThread(process.hProcess, nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(load_library), remote_path, 0, nullptr) : nullptr;
+    LPTHREAD_START_ROUTINE load_library_thread = nullptr;
+    if (load_library) {
+        static_assert(sizeof(load_library_thread) == sizeof(load_library), "Windows function pointer sizes differ");
+        std::memcpy(&load_library_thread, &load_library, sizeof(load_library_thread));
+    }
+    HANDLE injector = load_library_thread ? CreateRemoteThread(process.hProcess, nullptr, 0,
+                                                                load_library_thread, remote_path, 0, nullptr) : nullptr;
     if (!injector) {
         VirtualFreeEx(process.hProcess, remote_path, 0, MEM_RELEASE); TerminateProcess(process.hProcess, 0xE002); CloseHandle(process.hThread); CloseHandle(process.hProcess); return -4;
     }

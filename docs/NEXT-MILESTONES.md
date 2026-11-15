@@ -51,6 +51,7 @@ This roadmap is the implementation contract for the independent Windows x64 back
 - [x] Add the initial VEX scalar-single slice: `VMOVSS`, `VADDSS`, `VSUBSS`, `VMULSS`, and `VDIVSS`; broader scalar, conversion, and exception coverage remains open.
 - [x] Validate register and synthetic-memory forms against scalar/SSE references.
 - [x] Add the Windows VEX.128 guest fixture with exact VEX bytes in executable memory.
+- [x] Extend the experimental Windows VEH shim with VEX scalar-single arithmetic and validate packed/scalar fixtures under Wine/QEMU with a Conroe CPU model.
 - [ ] Add remaining AVX1 packed-single move/arithmetic variants needed by real compiler output.
 - [ ] Add scalar single/double forms, conversions, comparisons, blends, broadcasts, and selected shuffle/permute forms.
 - [ ] Add NaN, infinity, signed-zero, rounding, MXCSR, denormal, exception-mask, and faulting-memory tests.

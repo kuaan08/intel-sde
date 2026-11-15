@@ -116,22 +116,26 @@ bool emulate_vex128(CONTEXT* context) {
     unsigned vex_x = 0;
     unsigned src1 = 0;
     unsigned vector_length = 0;
+    unsigned mandatory_prefix = 0;
     unsigned opcode_offset = 0;
     if (ip[0] == 0xC5) {
         const std::uint8_t prefix = ip[1];
-        if ((prefix & 0x03U) != 0 || (prefix & 0x04U) != 0) return false;
+        if ((prefix & 0x04U) != 0 || ((prefix & 0x03U) != 0 && (prefix & 0x03U) != 2)) return false;
         src1 = ((~(prefix >> 3)) & 15U);
         vector_length = (prefix >> 2) & 1U;
+        mandatory_prefix = prefix & 3U;
         vex_length = 2;
         opcode_offset = 2;
     } else if (ip[0] == 0xC4) {
         const std::uint8_t p0 = ip[1];
         const std::uint8_t p1 = ip[2];
-        if ((p0 & 0x1FU) != 1 || (p1 & 0x80U) != 0 || (p1 & 0x03U) != 0) return false;
+        if ((p0 & 0x1FU) != 1 || (p1 & 0x80U) != 0 ||
+            ((p1 & 0x03U) != 0 && (p1 & 0x03U) != 2)) return false;
         vex_b = ((p0 >> 5) & 1U) ^ 1U;
         vex_x = ((p0 >> 6) & 1U) ^ 1U;
         src1 = ((~(p1 >> 3)) & 15U);
         vector_length = (p1 >> 2) & 1U;
+        mandatory_prefix = p1 & 3U;
         vex_length = 3;
         opcode_offset = 3;
     } else {
@@ -153,6 +157,10 @@ bool emulate_vex128(CONTEXT* context) {
     const unsigned rm = (modrm & 7U) | (vex_b << 3);
     if (dst >= 16 || src1 >= 16) return false;
 
+    const bool scalar_single = mandatory_prefix == 2 &&
+        (opcode == 0x10 || opcode == 0x11 || opcode == 0x58 || opcode == 0x5C ||
+         opcode == 0x59 || opcode == 0x5E);
+
     M128A* destination = xmm_register(context, dst);
     M128A* first = xmm_register(context, src1);
     if (!destination || !first) return false;
@@ -163,17 +171,54 @@ bool emulate_vex128(CONTEXT* context) {
     if (!safe_read(first, left.data(), left.size())) return false;
 
     unsigned instruction_length = vex_length + 2;
+    const unsigned operand_bytes = scalar_single ? 4U : 16U;
     if (mod == 3) {
         if (rm >= 16) return false;
         M128A* second = xmm_register(context, rm);
-        if (!second || !safe_read(second, right.data(), right.size())) return false;
+        if (!second || !safe_read(second, right.data(), operand_bytes)) return false;
     } else {
         std::uint64_t address = 0;
         if (!decode_memory_address(context, ip, vex_length, modrm, vex_b, vex_x,
                                    &address, &instruction_length) ||
-            !safe_read(reinterpret_cast<const void*>(address), right.data(), right.size())) {
+            !safe_read(reinterpret_cast<const void*>(address), right.data(), operand_bytes)) {
             return false;
         }
+    }
+
+    if (scalar_single) {
+        if (opcode == 0x11) {
+            if (mod == 3) return false;
+            std::uint64_t address = 0;
+            if (!decode_memory_address(context, ip, vex_length, modrm, vex_b, vex_x,
+                                       &address, &instruction_length) ||
+                !safe_write(reinterpret_cast<void*>(address), destination, 4)) return false;
+            context->Rip += instruction_length;
+            return true;
+        }
+        if (opcode == 0x10) {
+            std::array<std::uint8_t, 16> combined = left;
+            std::memcpy(combined.data(), right.data(), 4);
+            if (!safe_write(destination, combined.data(), combined.size())) return false;
+            context->Rip += instruction_length;
+            return true;
+        }
+        float left_value = 0.0f;
+        float right_value = 0.0f;
+        float value = 0.0f;
+        std::memcpy(&left_value, left.data(), 4);
+        std::memcpy(&right_value, right.data(), 4);
+        switch (opcode) {
+        case 0x58: value = left_value + right_value; break;
+        case 0x5C: value = left_value - right_value; break;
+        case 0x59: value = left_value * right_value; break;
+        case 0x5E: value = left_value / right_value; break;
+        default: return false;
+        }
+        std::array<std::uint8_t, 16> combined = left;
+        std::memcpy(combined.data(), &value, 4);
+        if (!safe_write(destination, combined.data(), combined.size())) return false;
+        context->Rip += instruction_length;
+        return true;
     }
 
     if (opcode == 0x10 || opcode == 0x28) {

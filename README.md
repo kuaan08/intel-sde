@@ -35,6 +35,7 @@ The current independent core can:
 - maintain deterministic guest GPR, vector, and memory state for regression tests;
 - expose shared IR, feature-coverage policy, and translated-block cache prototypes;
 - select bounded translated blocks through a dispatcher prototype with source-byte, module, feature-profile, and page-generation cache identity;
+- extend the experimental Windows VEH shim with scalar-single VEX handling and validate the packed/scalar fixture through Wine/QEMU with a Conroe no-AVX CPU model;
 - build a Windows process host and an experimental injected VEH shim for a small AVX1 VEX.128 register-and-memory subset;
 - compile a Windows AVX1 guest application fixture without executing it on a no-AVX host;
 - report deterministic interpreter throughput for regression tracking;
