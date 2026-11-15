@@ -6,7 +6,7 @@ Dynamic binary translation research · VEX decoding · SSE4.2 fallback · Window
 [![CI](https://github.com/kuaan08/intel-sde/actions/workflows/ci.yml/badge.svg)](https://github.com/kuaan08/intel-sde/actions/workflows/ci.yml)
 [![Latest commit](https://img.shields.io/github/last-commit/kuaan08/intel-sde)](https://github.com/kuaan08/intel-sde/commits/master)
 
-> **Work in progress — not a finished game emulator.** The independent runtime currently validates a controlled AVX1 subset, including register and synthetic guest-memory operations, on hosts that do not expose physical AVX. Process-level Windows translation, arbitrary application support, JIT invalidation, thread state, exception handling, and broad AVX2 coverage are still under development.
+> **Work in progress — not a finished.** The independent runtime currently validates a controlled AVX1 subset, including register and synthetic guest-memory operations, on hosts that do not expose physical AVX. Process-level Windows translation, arbitrary application support, JIT invalidation, thread state, exception handling, and broad AVX2 coverage are still under development.
 >
 > The Intel SDE package remains available only as a separate fallback for comparison and temporary compatibility testing. It is not the implementation of this project.
 
