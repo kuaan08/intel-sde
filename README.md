@@ -1,95 +1,186 @@
 # SDE AVX Lab
 
-## Independent AVX Compatibility Runtime for Windows x64
+**Independent AVX/AVX2 compatibility runtime for Windows x64**
+Dynamic binary translation research · VEX decoding · SSE4.2 fallback · Windows 10/11
 
 [![CI](https://github.com/kuaan08/intel-sde/actions/workflows/ci.yml/badge.svg)](https://github.com/kuaan08/intel-sde/actions/workflows/ci.yml)
+[![Latest commit](https://img.shields.io/github/last-commit/kuaan08/intel-sde)](https://github.com/kuaan08/intel-sde/commits/master)
 
-SDE AVX Lab is an independent research and engineering project for running selected x86-64 applications that require Intel Advanced Vector Extensions on host processors without physical AVX support.
+> **Work in progress — not a finished game emulator.** The independent runtime currently validates a controlled AVX1 subset, including register and synthetic guest-memory operations, on hosts that do not expose physical AVX. Process-level Windows translation, arbitrary application support, JIT invalidation, thread state, exception handling, and broad AVX2 coverage are still under development.
+>
+> The Intel SDE package remains available only as a separate fallback for comparison and temporary compatibility testing. It is not the implementation of this project.
 
-The project is designed for Windows 10/11 x64 systems, including low-power machines such as the Intel Celeron N5100. Its long-term goal is to provide an independent dynamic binary translation runtime that can decode incompatible VEX instructions, preserve architectural state, and execute equivalent SSE4.2-compatible code on the host.
+**Contents:** Progress · Builds and downloads · Quick start · Architecture · Runtime scope · Windows launcher · Documentation · Legal boundary · License
 
-This repository contains original project code, experimental runtime components, test programs, documentation, and a Windows launcher. The Intel Software Development Emulator package is retained separately as an optional external comparison tool. It is not the implementation of this project.
+## Progress
 
-## Current status
+The project is focused on building an independent dynamic binary translation runtime for x86-64 applications that require AVX on processors without physical AVX support.
 
-The project is in active prototype development.
-
-The current independent runtime can:
+The current independent core can:
 
 - decode a controlled subset of VEX-encoded AVX1 instructions;
-- interpret VEX.128 and VEX.256 register-only operations;
-- emulate `VADDPS`, `VSUBPS`, `VMULPS`, and `VDIVPS`;
-- emulate `VXORPS`, `VANDPS`, and `VORPS`;
-- emulate register-register `VMOVUPS` and `VMOVAPS`;
-- emulate `VZEROUPPER`;
-- maintain 16 logical YMM registers;
-- execute instruction programs stored in text files;
-- produce deterministic state checksums;
-- execute deterministic synthetic guest-memory loads and stores;
-- run tests compiled with AVX disabled on the host toolchain.
+- execute VEX.128 and VEX.256 packed-single operations without AVX host instructions;
+- emulate `VADDPS`, `VSUBPS`, `VMULPS`, `VDIVPS`, `VXORPS`, `VANDPS`, and `VORPS`;
+- emulate `VMOVUPS`, `VMOVAPS`, and `VZEROUPPER`;
+- maintain 16 logical YMM registers with correct 128-bit upper-lane clearing;
+- decode ModRM/SIB, displacements, and RIP-relative x64 addressing;
+- execute supported synthetic guest-memory loads and stores;
+- maintain deterministic guest GPR, vector, and memory state for regression tests;
+- expose shared IR, feature-coverage policy, and translated-block cache prototypes;
+- build and test on Windows x64 and on an x86-64 no-AVX target through QEMU;
+- verify that generated no-AVX binaries do not contain unsupported V-prefixed host instructions.
 
-The current runtime is not yet a full process-level DBT and must not be advertised as a finished game emulator. Memory operands now execute against a deterministic synthetic guest-memory harness, while process-memory access and interception are still under development. A block-cache and coverage-gating prototype is present; JIT code support, Windows exception integration, and broad AVX/AVX2 coverage are not complete.
+These capabilities are core validation stages. They do not yet mean that an arbitrary Windows game or application can be translated and executed by the independent backend.
 
-## Repository layout
+### Current engineering boundary
 
-```text
-sde-gaming-4f6209bb/
-├── avx-runtime/                 Independent AVX1 interpreter runtime
-│   ├── src/                     Runtime source code
-│   ├── include/                 Shared IR, memory addressing, cache, and feature policy
-│   ├── tests/                   Runtime programs and automated tests
-│   ├── CMakeLists.txt            Cross-platform build definition
-│   └── Build-Windows.bat         Windows x64 build script
-├── avx1-sse-poc/                AVX1-to-legacy-SSE proof of concept
-├── sde-avx-lab-app/             Windows WinForms launcher source
-├── windows-9.58/                Optional external Intel SDE Windows package
-├── linux-9.14/                  Historical Linux reference package
-├── lab/                         Non-invasive package audit tools
-├── docs/                        Project architecture and engineering notes
-├── profiles/                    Application profile templates
-├── tools/                       Windows release packaging scripts
-├── LICENSE                      License for original SDE AVX Lab files
-└── THIRD-PARTY-NOTICES.md       External package and license boundaries
-```
+The independent runtime is the primary backend and receives all new implementation work. The next major layers are process executable-memory discovery, basic-block translation, code-cache invalidation, per-thread state, Windows SEH/VEH integration, loader and JIT handling, and coverage-gated `CPUID`/`XGETBV` virtualization.
 
-## Build the independent runtime on Windows
+The external Intel SDE backend is intentionally kept separate. It is useful for collecting comparison data or launching a target while the independent process runtime is being completed, but an application running under Intel SDE is not evidence that the SDE AVX Lab backend works.
 
-Requirements:
+## Builds and downloads
 
-- Windows 10 or Windows 11 x64;
-- CMake 3.16 or newer;
-- Visual Studio 2019/2022 with the Desktop C++ workload, or another compatible x64 C++ toolchain.
+GitHub Actions compiles and tests the project on every push and pull request.
 
-Build and run the self-test:
+- [Latest CI workflow](https://github.com/kuaan08/intel-sde/actions/workflows/ci.yml)
+- [All workflow runs](https://github.com/kuaan08/intel-sde/actions)
+- Windows x64 packages are available as artifacts from successful CI runs.
+
+The Windows artifact contains the independent runtime, the AVX1-to-SSE proof of concept, the WinForms launcher, documentation, license notices, and SHA-256 checksums. Intel SDE is not redistributed by this project.
+
+## Quick start
+
+### Independent runtime
+
+On Windows x64, extract the CI package and run:
 
 ```bat
-cd avx-runtime
-Build-Windows.bat
+avx_runtime.exe --self-test
 ```
 
-The expected output includes:
+Expected result:
 
 ```text
-PASS: independent AVX1 interpreter self-test; no AVX host instructions required.
-```
-
-The runtime can also execute the checked-in instruction program:
-
-```bat
-build-windows\Release\avx_runtime.exe --run-file tests\sample-program.txt
+PASS: independent AVX1 interpreter self-test; register and memory operands; no AVX host instructions required.
 ```
 
 Decode a VEX instruction without executing it:
 
 ```bat
-build-windows\Release\avx_runtime.exe --decode "c4 41 34 58 e6"
+avx_runtime.exe --decode "c5 f0 58 00"
 ```
 
-## Build the Windows application
+The decoder reports the instruction as a 128-bit `VADDPS` with an `[rax]` memory source.
 
-The launcher is original project code. It provides a graphical workflow for selecting an application, storing per-game profiles, selecting a backend, writing diagnostics, and launching the optional external SDE backend.
+Run the checked-in deterministic program suite after building from source:
 
-Build it on Windows with .NET Framework 4.x:
+```bat
+avx_runtime.exe --run-file tests\programs\memory-avx1.txt
+```
+
+### Build from source on Windows
+
+Requirements:
+
+- Windows 10 or Windows 11 x64;
+- CMake 3.16 or newer;
+- Visual Studio 2019/2022 with the Desktop C++ workload, or a compatible x64 C++ toolchain.
+
+```bat
+cd avx-runtime
+Build-Windows.bat
+build-windows\Release\avx_runtime.exe --self-test
+```
+
+### Build and test on Linux or ARM64/QEMU
+
+On an x86-64 Linux host:
+
+```bash
+cd avx-runtime
+./tests/run-tests.sh
+./tests/run-avx1-suite.sh
+```
+
+On the ARM64 development environment, the scripts use an x86-64 cross-compiler and QEMU user-mode. The build disables AVX, AVX2, FMA, and AVX-512 code generation.
+
+For a CMake/CTest build with an explicit x86-64 runner:
+
+```bash
+cmake -S avx-runtime -B avx-runtime/build/test \
+  -DCMAKE_CXX_COMPILER=x86_64-linux-gnu-g++ \
+  -DSDE_AVX_TEST_RUNNER=/usr/bin/qemu-x86_64 \
+  -DSDE_AVX_TEST_RUNNER_ARGS="-L /usr/x86_64-linux-gnu"
+cmake --build avx-runtime/build/test --parallel
+ctest --test-dir avx-runtime/build/test --output-on-failure
+```
+
+## Architecture
+
+The runtime is being developed in independent layers so that each layer can be tested before process integration.
+
+```text
+Windows x64 application
+          │
+          ▼
+Executable-page discovery and thread runtime
+          │
+          ▼
+VEX decoder ──► shared IR ──► basic-block translator
+                                  │
+                                  ▼
+                         translated-block cache
+                                  │
+                    ┌─────────────┴─────────────┐
+                    ▼                           ▼
+             scalar interpreter             SSE4.2 backend
+                    │                           │
+                    └─────────────┬─────────────┘
+                                  ▼
+                    host CPU without physical AVX
+```
+
+The planned process runtime must preserve architectural state, memory ordering, MXCSR behavior, upper YMM state, control flow, thread-local state, exceptions, and self-modifying/JIT code invalidation. CPUID and XGETBV must remain coverage-gated; the runtime must never advertise AVX or AVX2 before the corresponding execution path is implemented and tested.
+
+## Runtime scope
+
+The first correctness target is AVX1 packed single-precision data movement and arithmetic:
+
+```text
+VADDPS       VSUBPS       VMULPS       VDIVPS
+VMOVUPS      VMOVAPS      VXORPS       VANDPS
+VORPS        VZEROUPPER
+```
+
+The current memory harness uses deterministic guest registers and memory only for core validation. It is not a substitute for reading and writing another Windows process. Process-level memory access will be implemented with explicit range checks, page handling, executable-page tracking, and invalidation tests.
+
+The next instruction milestones are scalar forms, integer AVX operations, conversions, broadcasts, permutations, and AVX2 integer/vector operations. Each instruction requires semantic tests, differential checks, and a host-code audit.
+
+## Windows launcher
+
+The repository includes an original WinForms launcher for selecting the backend, target executable, working directory, CPU profile, diagnostics, and per-application settings.
+
+The default entry is:
+
+```text
+SDE AVX Lab Runtime (principal; experimental)
+```
+
+At the current stage it runs the independent runtime self-test and core experiments. It does not yet translate an arbitrary game process.
+
+The separate fallback entry is:
+
+```text
+Intel SDE 9.58 (fallback externo)
+```
+
+It is retained for users who need a temporary external compatibility path or comparison data. To start the launcher from `cmd.exe`, quote the filename because it contains spaces:
+
+```bat
+start "SDE AVX Lab" "SDE AVX Lab.exe"
+```
+
+Build the launcher with .NET Framework 4.x:
 
 ```bat
 cd sde-avx-lab-app
@@ -97,113 +188,73 @@ Build.bat
 Start.bat
 ```
 
-The application selects the SDE AVX Lab Runtime as its default and primary backend. In the current prototype, it runs the independent runtime self-test and core experiments; arbitrary process launch is still being implemented. Intel SDE 9.58 remains available only as an explicitly labelled fallback backend for users who need a temporary compatibility path.
-
-## Independent runtime test on Linux x86-64 or ARM64/QEMU
-
-On an x86-64 Linux host:
-
-```bash
-cd avx-runtime
-./tests/run-tests.sh
-```
-
-On the ARM64 development sandbox, the test script uses an x86-64 cross-compiler and QEMU user-mode. It disables AVX, AVX2, FMA, and AVX-512 code generation and verifies that the generated runtime contains no V-prefixed AVX instructions.
-
-## Continuous integration
-
-GitHub Actions runs `.github/workflows/ci.yml` on pushes and pull requests. The Linux job uses the x86-64 cross-compiler and QEMU to test the interpreter and AVX1-to-SSE proof of concept without AVX. The Windows job builds the independent runtime, the SSE POC, and the WinForms launcher with x64 toolchains. Generated build trees are excluded from version control.
-
-## Example instruction program
-
-`avx-runtime/tests/sample-program.txt` contains a small independent program:
+## Repository layout
 
 ```text
-c5 f0 58 c2
-c5 e4 57 db
-c5 f8 77
+avx-runtime/                 Independent AVX1 runtime and core tests
+avx1-sse-poc/                AVX1-to-legacy-SSE proof of concept
+sde-avx-lab-app/             Original Windows launcher source
+profiles/                    Application profile templates
+docs/                        Architecture, backend strategy, and milestones
+tools/                       Windows release packaging scripts
+windows-9.58/                Optional external Intel SDE fallback package
+linux-9.14/                  Historical reference package
+lab/                         Non-invasive external-package audit tools
+.github/workflows/           Reproducible Linux and Windows CI
+LICENSE                      License for original SDE AVX Lab files
+THIRD-PARTY-NOTICES.md       Third-party package and license boundaries
 ```
 
-The runtime parses one VEX instruction per line, ignores comments, executes the sequence, and prints a state digest. This format is intentionally simple and deterministic so that decoder and emulator behavior can be tested before process-level DBT is introduced.
+## Documentation
 
-## Architecture
-
-The project is being developed in layers:
-
-1. **Instruction decoder** — parses VEX prefixes, opcode fields, register operands, vector width, and reserved fields.
-2. **Independent interpreter** — provides a correctness-first fallback for the supported subset.
-3. **SSE lowering backend** — emits legacy SSE4.2-compatible sequences for supported AVX1 operations.
-4. **Intermediate representation** — unifies interpretation and compiled translation.
-5. **Basic-block translator** — translates complete blocks while preserving control flow.
-6. **Code cache** — caches translated blocks and invalidates them when executable memory changes.
-7. **Windows process runtime** — adds thread, exception, loader, JIT, CPUID, and XGETBV handling.
-8. **Game compatibility layer** — adds per-application profiles, diagnostics, telemetry, and safe fallbacks.
-
-The runtime must never advertise AVX or AVX2 through CPUID/XGETBV until the corresponding execution coverage is implemented and tested.
-
-The public Intel SDE capability comparison and independent implementation plan are documented in [docs/INTEL-SDE-FEATURE-MAP.md](docs/INTEL-SDE-FEATURE-MAP.md).
-
-## Planned instruction coverage
-
-The first correctness target is AVX1 packed single-precision arithmetic and data movement:
-
-- `VADDPS`
-- `VSUBPS`
-- `VMULPS`
-- `VDIVPS`
-- `VMOVUPS`
-- `VMOVAPS`
-- `VXORPS`
-- `VANDPS`
-- `VORPS`
-- `VZEROUPPER`
-
-The next coverage milestones are memory operands, scalar forms, integer AVX operations, conversion instructions, FMA policy, and AVX2 integer/vector operations. Every new instruction requires semantic tests and a host-code audit.
+- [Architecture](docs/ARCHITECTURE.md)
+- [Backend strategy](docs/BACKEND-STRATEGY.md)
+- [Next engineering milestones](docs/NEXT-MILESTONES.md)
+- [Intel SDE public feature map](docs/INTEL-SDE-FEATURE-MAP.md)
+- [Build guide](docs/BUILDING.md)
+- [Runtime documentation](avx-runtime/README.md)
+- [Launcher documentation](sde-avx-lab-app/README.md)
+- [Third-party notices](THIRD-PARTY-NOTICES.md)
 
 ## Validation policy
 
-A feature is not considered complete because a program starts. Each backend change must be tested against:
+A feature is not considered complete because a process starts. Every backend change must be tested against an independent scalar reference and, where applicable, a legacy SSE implementation or a compatible AVX reference.
 
-- an independent scalar reference;
-- a legacy SSE implementation where applicable;
-- a compatible AVX execution reference when available;
-- NaN, infinity, signed zero, rounding, overflow, underflow, and aliasing cases;
-- 128-bit and 256-bit state transitions;
-- generated-code disassembly confirming that the no-AVX backend does not contain AVX instructions;
-- cache, thread, and exception behavior once process-level translation exists.
+Tests must cover 128-bit and 256-bit transitions, aliasing, memory boundaries, NaN and infinity behavior, signed zero, rounding, overflow, underflow, MXCSR-sensitive behavior, generated-code disassembly, cache invalidation, threads, and exceptions as those layers become available.
 
-Opening a game window is not evidence of playable compatibility. Results must record initialization, menu, loaded content, frame rate, crashes, visual correctness, and logs separately.
-
-## Optional Intel SDE reference package
-
-The `windows-9.58` and `linux-9.14` directories are not the project runtime. They are kept intact for authorized external comparison and documentation review.
-
-The Intel packages are governed by their own license terms. They are not modified, patched, reverse engineered, or used as a source of copied implementation code. See `THIRD-PARTY-NOTICES.md` and `lab/README.md`.
+Opening a game window is not evidence of playable compatibility. Compatibility claims require reproducible logs, initialization results, loaded content, frame-time measurements, crash behavior, and correctness observations from the independent backend.
 
 ## Legal and engineering boundary
 
-SDE AVX Lab is an independent implementation. It may learn from public ISA documentation, public compiler behavior, open-source projects with compatible licenses, and externally observed test results. It must not copy proprietary implementation code or derive code through prohibited reverse engineering of Intel binaries.
+SDE AVX Lab is an independent implementation. It may use public ISA documentation, public compiler behavior, open-source projects with compatible licenses, and externally observed test results.
 
-The original SDE AVX Lab source code is licensed under the license in `LICENSE`. That license does not relicense or alter any third-party package stored under `intel-sde/`.
+The Intel SDE package is not modified, patched, or used as a source of copied implementation code. Its files remain subject to their own license terms. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and [lab/README.md](lab/README.md).
+
+Use only software and application files that you are authorized to use. No games, keys, firmware, dumps, proprietary Intel implementation code, or third-party assets are distributed by this repository.
 
 ## Roadmap
 
 - [x] Independent VEX decoder prototype
-- [x] AVX1 register-only interpreter prototype
+- [x] AVX1 register and synthetic-memory interpreter prototype
 - [x] AVX1-to-SSE register-only proof of concept
-- [x] Windows launcher prototype
-- [x] ModRM/SIB memory operands and x64 addressing decoder prototype
-- [x] Shared IR data model and block-cache invalidation prototype
-- [ ] Basic-block translation
+- [x] ModRM/SIB memory operands and x64 addressing decoder
+- [x] Shared IR data model and cache invalidation prototype
+- [ ] Shared IR integration with complete decoded instructions
+- [ ] Basic-block translation and control-flow boundaries
 - [ ] Executable-memory discovery and process-level invalidation
-- [ ] Windows thread and exception runtime
-- [x] CPUID/XGETBV coverage policy prototype
-- [x] Deterministic AVX1 application-style regression suite
+- [ ] Windows thread, loader, JIT, and exception runtime
+- [x] Coverage-gated feature policy prototype
+- [ ] Process-level CPUID/XGETBV virtualization
+- [x] Deterministic AVX1 regression programs
+- [ ] AVX1 Windows application test suite
 - [ ] AVX2 implementation milestones
-- [x] Game-specific compatibility profile templates
 - [x] Windows CI build and release packaging
 - [ ] Performance tuning and benchmark suite
 
-## Contributing
+## Acknowledgements
 
-Keep changes small and testable. Add a decoder fixture before adding a new opcode. Add semantic tests before adding an optimization. Do not mix external Intel package files with original runtime source files. Every benchmark must identify the host CPU, compiler, build flags, workload, and whether the result came from the independent runtime or an external reference backend.
+The project studies public documentation and open-source runtime techniques from the x86 ecosystem, including decoder, instrumentation, and dynamic translation concepts. Those references inform architecture and testing only; the independent runtime source remains original project code.
+
+## License
+
+Original SDE AVX Lab source files are distributed under [LICENSE](LICENSE). Third-party packages and their licenses are described separately in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
