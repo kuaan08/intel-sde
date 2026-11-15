@@ -24,6 +24,8 @@ This is a cross-emulated validation environment. It is not native Windows 10, na
 | Launcher, default mode | SDE AVX Lab process host without `SDE_AVX_LAB_EXPERIMENTAL_CPUID=1` | Target process started, but no AVX translation or complete DBT was demonstrated. |
 | CPUID fixture | Windows fixture under the launcher with `SDE_AVX_LAB_EXPERIMENTAL_CPUID=1` | **PASS**: virtual AVX/OSXSAVE and `XCR0=0x6`; exit status 0. |
 | Post-startup JIT fixture | Fixture allocates writable memory, publishes it as executable, emits VEX.128 `VADDPS`, and executes through the injected shim | **PASS**: `11.0 22.0 33.0 44.0`; exit status 0. |
+| Multithread JIT fixture | Four Windows worker threads execute the same post-startup VEX.128 JIT page concurrently | **PASS**: `3.0 14.0 108.0 -2.0`; exit status 0. |
+| Exception-chain fixture | Shim declines an intentionally unsupported VEX form; a later target VEH skips it and resumes at a safe instruction | **PASS**: `result=0 handled=1`; exit status 0. |
 | Xenia, CPUID opt-in | Xenia under the launcher with `SDE_AVX_LAB_EXPERIMENTAL_CPUID=1` | The previous breakpoint failure was fixed. Xenia remained active through the 45-second timeout without the AVX startup rejection or an unhandled `INT3` from the feature-query path. |
 
 The CPUID fixture printed the following result:

@@ -6,6 +6,9 @@
 - Added a Windows CPUID/XGETBV fixture and recorded a Xenia Canary liveness test that passed beyond the feature-query stage under Wine/QEMU Conroe; this does not establish complete JIT translation or game compatibility.
 - Added a post-startup JIT fixture that publishes a VEX.128 code page and executes it successfully through the injected VEH shim under the no-AVX QEMU profile.
 - Improved Windows executable-region refresh to retain live regions, detect size changes, and remove stale regions after JIT or unload activity; full remote-process write hooks remain pending.
+- Added a four-worker-thread JIT fixture; concurrent supported VEX.128 execution passed under the no-AVX QEMU profile.
+- Added an unsupported-instruction VEH-chain fixture; the shim failed closed and the target's later handler recovered execution with the expected result.
+- The complete controlled Windows fixture matrix now passes under QEMU Conroe: CPUID/XGETBV, VEX.128, post-startup JIT, four-thread JIT, and exception chaining.
 - Reorganized project documentation under `docs/`, added a canonical documentation index, and moved the external Windows package manifest out of the repository root.
 - Renamed and translated author-maintained Portuguese documents to English while preserving historical feasibility and research records under `docs/legacy/`.
 - Clarified the boundary between project documentation, test fixtures, and unchanged third-party package files.

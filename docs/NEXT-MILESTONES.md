@@ -87,6 +87,7 @@ This roadmap is the implementation contract for the independent Windows x64 back
 - [ ] Make cache publication and invalidation safe for concurrent threads.
 - [ ] Add self-modifying-code and JIT regression programs.
 - [x] Add a controlled post-startup JIT regression fixture for supported VEX.128 execution; cache invalidation and translated-code ownership remain pending.
+- [x] Execute the controlled JIT page concurrently from four Windows worker threads; full guest thread-state capture and cache synchronization remain pending.
 
 **Acceptance gate:** a program that overwrites an already translated instruction executes the new bytes on the next dispatch without stale-block execution or data races.
 
@@ -97,13 +98,14 @@ This roadmap is the implementation contract for the independent Windows x64 back
 - [x] Start a Windows target suspended and inject the experimental shim.
 - [x] Route a narrow `EXCEPTION_ILLEGAL_INSTRUCTION` case through a VEH handler.
 - [x] Create a synchronized per-thread guest state model; capture/restore at translated process entries is pending.
-- [ ] Register existing threads and observe loader-created threads.
+- [x] Validate concurrent worker-thread execution through the VEH path with a four-thread JIT fixture; registering all target and loader-created threads remains pending.
 - [ ] Handle thread start, exit, TLS, APC, fiber, and suspend/resume interactions.
 - [x] Discover committed executable regions with `VirtualQuery`; module identity and loader callbacks remain pending.
 - [ ] Handle loader notifications and dynamically loaded modules.
 - [ ] Handle JIT-created executable pages and code invalidation.
 - [x] Execute a controlled JIT-created executable page through the injected VEH shim; general JIT discovery, translation-cache ownership, and invalidation remain pending.
 - [x] Add structured unsupported-opcode diagnostics in the core; controlled SEH/VEH chaining and minidump metadata remain pending.
+- [x] Validate fail-closed chaining with an intentionally unsupported VEX instruction and a later target VEH recovery fixture; production SEH metadata and minidump integration remain pending.
 - [ ] Define safe behavior for syscalls, callbacks, indirect branches, and native exception unwinding.
 
 **Acceptance gate:** a multi-threaded Windows fixture with a dynamically generated code page, an intentional supported AVX instruction, an intentional unsupported instruction, and a handled exception completes with correct logs and no corruption of the host process.

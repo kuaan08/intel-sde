@@ -8,11 +8,64 @@
 #include "avx_runtime/process_runtime.hpp"
 #include "avx_runtime/sse_lowering.hpp"
 #include "avx_runtime/translator.hpp"
+#include <array>
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <string>
 #include <utility>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
+
+namespace {
+
+void* make_executable_copy(const std::vector<std::uint8_t>& code) {
+#ifdef _WIN32
+    void* memory = VirtualAlloc(nullptr, code.size(), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!memory) return nullptr;
+    std::memcpy(memory, code.data(), code.size());
+    DWORD old_protection = 0;
+    if (!VirtualProtect(memory, code.size(), PAGE_EXECUTE_READ, &old_protection)) {
+        VirtualFree(memory, 0, MEM_RELEASE);
+        return nullptr;
+    }
+    FlushInstructionCache(GetCurrentProcess(), memory, code.size());
+    return memory;
+#else
+    const long page_size = sysconf(_SC_PAGESIZE);
+    const std::size_t allocation = ((code.size() + static_cast<std::size_t>(page_size) - 1) /
+                                    static_cast<std::size_t>(page_size)) * static_cast<std::size_t>(page_size);
+    void* memory = mmap(nullptr, allocation, PROT_READ | PROT_WRITE,
+                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (memory == MAP_FAILED) return nullptr;
+    std::memcpy(memory, code.data(), code.size());
+    if (mprotect(memory, allocation, PROT_READ | PROT_EXEC) != 0) {
+        munmap(memory, allocation);
+        return nullptr;
+    }
+    return memory;
+#endif
+}
+
+void release_executable_copy(void* memory, std::size_t code_size) {
+#ifdef _WIN32
+    (void)code_size;
+    VirtualFree(memory, 0, MEM_RELEASE);
+#else
+    const long page_size = sysconf(_SC_PAGESIZE);
+    const std::size_t allocation = ((code_size + static_cast<std::size_t>(page_size) - 1) /
+                                    static_cast<std::size_t>(page_size)) * static_cast<std::size_t>(page_size);
+    munmap(memory, allocation);
+#endif
+}
+
+} // namespace
 
 int main() {
     using namespace avxlab;
@@ -79,6 +132,26 @@ int main() {
     assert(straight_sse.supported && !straight_sse.code.empty());
     assert(!contains_vex_or_evex_prefix(straight_sse.code));
     assert(straight_sse.code.back() == 0xC3);
+
+    // Execute the generated legacy-SSE block through a W^X code page. The
+    // generated function receives the logical YMM state pointer in the native
+    // first-argument register (RDI on SysV, RCX on Windows x64).
+    const auto executable_code = lower_block_to_legacy_sse(
+        translate_basic_block({0xC5, 0xF0, 0x58, 0xC2}, 0xB100).block);
+    assert(executable_code.supported);
+    std::array<std::uint8_t, 16 * 32> guest_state{};
+    float left = 2.0f;
+    float right = 3.0f;
+    std::memcpy(guest_state.data() + 32, &left, sizeof(left));
+    std::memcpy(guest_state.data() + 64, &right, sizeof(right));
+    void* executable_code_page = make_executable_copy(executable_code.code);
+    assert(executable_code_page != nullptr);
+    using LoweredFunction = void (*)(void*);
+    reinterpret_cast<LoweredFunction>(executable_code_page)(guest_state.data());
+    float lowered_result = 0.0f;
+    std::memcpy(&lowered_result, guest_state.data(), sizeof(lowered_result));
+    assert(lowered_result == 5.0f);
+    release_executable_copy(executable_code_page, executable_code.code.size());
 
     const auto memory_block = translate_basic_block({0xC5, 0xF0, 0x58, 0x00}, 0xC000);
     const auto memory_sse = lower_block_to_legacy_sse(memory_block.block);

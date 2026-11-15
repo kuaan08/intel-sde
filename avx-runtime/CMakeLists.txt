@@ -68,6 +68,18 @@ if(MSVC)
   target_compile_features(windows_jit_fixture PRIVATE cxx_std_17)
   target_compile_options(windows_jit_fixture PRIVATE /W4 /O2)
 
+  add_executable(windows_multithread_jit_fixture
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_multithread_jit_fixture.cpp"
+  )
+  target_compile_features(windows_multithread_jit_fixture PRIVATE cxx_std_17)
+  target_compile_options(windows_multithread_jit_fixture PRIVATE /W4 /O2)
+
+  add_executable(windows_exception_chain_fixture
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_exception_chain_fixture.cpp"
+  )
+  target_compile_features(windows_exception_chain_fixture PRIVATE cxx_std_17)
+  target_compile_options(windows_exception_chain_fixture PRIVATE /W4 /O2)
+
   add_library(avx_winshim SHARED src/windows_avx_shim.cpp)
   target_compile_features(avx_winshim PRIVATE cxx_std_17)
   target_compile_options(avx_winshim PRIVATE /W4 /O2 /arch:SSE2)

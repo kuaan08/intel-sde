@@ -13,6 +13,8 @@ The independent backend now contains the first process-hosting layer for Windows
 - resolves basic ModRM/SIB, base/index, displacement, and RIP-relative memory operands with guarded reads/writes;
 - supports the initial arithmetic, logical, move, and `VZEROUPPER` forms implemented by the shim.
 - passes a controlled post-startup JIT fixture that allocates a writable page, publishes it as executable, and executes a supported VEX.128 instruction through the VEH path under Wine/QEMU Conroe.
+- passes a four-worker-thread variant of the JIT fixture, confirming that concurrent supported VEX faults can be chained through the installed VEH without corrupting the fixture's independent results.
+- passes an exception-chain fixture in which the shim declines an intentionally unsupported VEX form and a later target VEH recovers execution with the expected result.
 
 The launcher uses this path when the own backend is selected and both a target executable and `avx_winshim.dll` are available beside `avx_runtime.exe`. Without the shim, it falls back to the deterministic self-test.
 
