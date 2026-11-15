@@ -2,7 +2,10 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <tlhelp32.h>
+#include <cstdint>
 #include <cstring>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -29,6 +32,78 @@ bool absolute_path(const std::wstring& input, std::wstring* output) {
     buffer.resize(static_cast<std::size_t>(written));
     *output = buffer;
     return true;
+}
+
+std::size_t patch_feature_queries_in_module(HANDLE process, std::uintptr_t base,
+                                            DWORD section_rva, DWORD section_size) {
+    if (section_size == 0) return 0;
+    std::vector<std::uint8_t> bytes(section_size);
+    SIZE_T read = 0;
+    if (!ReadProcessMemory(process, reinterpret_cast<const void*>(base + section_rva),
+                           bytes.data(), bytes.size(), &read) || read != bytes.size()) return 0;
+    std::size_t patched = 0;
+    for (std::size_t i = 0; i + 2 < bytes.size(); ++i) {
+        const bool cpuid = bytes[i] == 0x0F && bytes[i + 1] == 0xA2;
+        const bool xgetbv = bytes[i] == 0x0F && bytes[i + 1] == 0x01 && bytes[i + 2] == 0xD0;
+        if (!cpuid && !xgetbv) continue;
+        BYTE trap = 0xCC;
+        DWORD old_protection = 0;
+        void* address = reinterpret_cast<void*>(base + section_rva + i);
+        if (!VirtualProtectEx(process, address, 1, PAGE_EXECUTE_READWRITE, &old_protection)) continue;
+        SIZE_T written = 0;
+        const bool wrote = WriteProcessMemory(process, address, &trap, 1, &written) && written == 1;
+        FlushInstructionCache(process, address, xgetbv ? 3 : 2);
+        DWORD ignored = 0;
+        VirtualProtectEx(process, address, 1, old_protection, &ignored);
+        if (wrote) ++patched;
+    }
+    return patched;
+}
+
+std::size_t patch_main_module_feature_queries(HANDLE process, DWORD process_id) {
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, process_id);
+    if (snapshot == INVALID_HANDLE_VALUE) return 0;
+    MODULEENTRY32W module{};
+    module.dwSize = sizeof(module);
+    if (!Module32FirstW(snapshot, &module)) {
+        CloseHandle(snapshot);
+        return 0;
+    }
+    const std::uintptr_t base = reinterpret_cast<std::uintptr_t>(module.modBaseAddr);
+    IMAGE_DOS_HEADER dos{};
+    IMAGE_NT_HEADERS64 nt{};
+    SIZE_T transferred = 0;
+    if (!ReadProcessMemory(process, reinterpret_cast<const void*>(base), &dos, sizeof(dos), &transferred) ||
+        dos.e_magic != IMAGE_DOS_SIGNATURE ||
+        !ReadProcessMemory(process, reinterpret_cast<const void*>(base + dos.e_lfanew), &nt, sizeof(nt), &transferred) ||
+        nt.Signature != IMAGE_NT_SIGNATURE || nt.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
+        CloseHandle(snapshot);
+        return 0;
+    }
+    std::vector<IMAGE_SECTION_HEADER> sections(nt.FileHeader.NumberOfSections);
+    const std::uintptr_t section_base = base + dos.e_lfanew + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER) +
+                                        nt.FileHeader.SizeOfOptionalHeader;
+    if (!sections.empty() && (!ReadProcessMemory(process, reinterpret_cast<const void*>(section_base),
+                                                  sections.data(), sections.size() * sizeof(IMAGE_SECTION_HEADER),
+                                                  &transferred) || transferred != sections.size() * sizeof(IMAGE_SECTION_HEADER))) {
+        CloseHandle(snapshot);
+        return 0;
+    }
+    std::size_t patched = 0;
+    for (const IMAGE_SECTION_HEADER& section : sections) {
+        if ((section.Characteristics & IMAGE_SCN_MEM_EXECUTE) == 0) continue;
+        patched += patch_feature_queries_in_module(process, base, section.VirtualAddress,
+                                                   section.Misc.VirtualSize);
+    }
+    CloseHandle(snapshot);
+    return patched;
+}
+
+bool experimental_feature_patch_enabled() {
+    wchar_t value[8] = {};
+    const DWORD length = GetEnvironmentVariableW(L"SDE_AVX_LAB_EXPERIMENTAL_CPUID", value,
+                                                  static_cast<DWORD>(std::size(value)));
+    return length > 0 && value[0] == L'1';
 }
 
 } // namespace
@@ -79,6 +154,12 @@ int run_process_with_shim(const std::string& target_path, const std::string& shi
         TerminateProcess(process.hProcess, 0xE003);
         CloseHandle(process.hThread); CloseHandle(process.hProcess);
         return -5;
+    }
+    // Experimental feature-query virtualization is opt-in until native Windows
+    // validation covers loader and JIT modules. The shim handles INT3 followed by
+    // CPUID/XGETBV in the main image only.
+    if (experimental_feature_patch_enabled()) {
+        (void)patch_main_module_feature_queries(process.hProcess, process.dwProcessId);
     }
     ResumeThread(process.hThread);
     WaitForSingleObject(process.hProcess, INFINITE);

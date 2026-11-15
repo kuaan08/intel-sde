@@ -1,5 +1,10 @@
 #ifdef _WIN32
 #include <windows.h>
+#if defined(__GNUC__)
+#include <cpuid.h>
+#else
+#include <intrin.h>
+#endif
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -48,6 +53,46 @@ bool safe_write(void* destination, const void* source, std::size_t bytes) {
     std::memcpy(destination, source, bytes);
     return true;
 #endif
+}
+
+bool emulate_virtual_feature_query(CONTEXT* context) {
+    if (!context || context->Rip == 0) return false;
+    std::uint8_t opcode[4] = {};
+    if (!safe_read(reinterpret_cast<const void*>(context->Rip), opcode, sizeof(opcode))) return false;
+    unsigned breakpoint_length = 0;
+    if (opcode[0] == 0xCC) {
+        breakpoint_length = 1;
+        std::memmove(opcode, opcode + 1, 3);
+    }
+    if (opcode[0] == 0x0F && opcode[1] == 0xA2) {
+        unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
+#if defined(__GNUC__)
+        __cpuid_count(static_cast<unsigned int>(context->Rax),
+                      static_cast<unsigned int>(context->Rcx), eax, ebx, ecx, edx);
+#else
+        int values[4] = {};
+        __cpuidex(values, static_cast<int>(context->Rax), static_cast<int>(context->Rcx));
+        eax = static_cast<unsigned int>(values[0]); ebx = static_cast<unsigned int>(values[1]);
+        ecx = static_cast<unsigned int>(values[2]); edx = static_cast<unsigned int>(values[3]);
+#endif
+        if (static_cast<unsigned int>(context->Rax) == 1) {
+            ecx |= (1U << 26) | (1U << 27) | (1U << 28); // XSAVE, OSXSAVE, AVX
+        }
+        if (static_cast<unsigned int>(context->Rax) == 7 &&
+            static_cast<unsigned int>(context->Rcx) == 0) {
+            ebx &= ~(1U << 5); // AVX2 remains hidden until its backend is complete.
+        }
+        context->Rax = eax; context->Rbx = ebx; context->Rcx = ecx; context->Rdx = edx;
+        context->Rip += breakpoint_length + 2;
+        return true;
+    }
+    if (opcode[0] == 0x0F && opcode[1] == 0x01 && opcode[2] == 0xD0 && context->Rcx == 0) {
+        context->Rax = 6; // XMM and YMM state enabled in the virtual guest view.
+        context->Rdx = 0;
+        context->Rip += breakpoint_length + 3;
+        return true;
+    }
+    return false;
 }
 
 bool decode_memory_address(CONTEXT* context, const std::uint8_t* ip, unsigned vex_length,
@@ -277,7 +322,10 @@ bool emulate_vex128(CONTEXT* context) {
 }
 
 LONG CALLBACK sde_avx_vectored_handler(PEXCEPTION_POINTERS pointers) {
-    if (!pointers || !pointers->ExceptionRecord || pointers->ExceptionRecord->ExceptionCode != EXCEPTION_ILLEGAL_INSTRUCTION) return EXCEPTION_CONTINUE_SEARCH;
+    if (!pointers || !pointers->ExceptionRecord || !pointers->ContextRecord) return EXCEPTION_CONTINUE_SEARCH;
+    if (pointers->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT &&
+        emulate_virtual_feature_query(pointers->ContextRecord)) return EXCEPTION_CONTINUE_EXECUTION;
+    if (pointers->ExceptionRecord->ExceptionCode != EXCEPTION_ILLEGAL_INSTRUCTION) return EXCEPTION_CONTINUE_SEARCH;
     return emulate_vex128(pointers->ContextRecord) ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
 }
 

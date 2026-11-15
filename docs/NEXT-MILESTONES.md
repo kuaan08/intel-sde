@@ -112,6 +112,7 @@ This roadmap is the implementation contract for the independent Windows x64 back
 
 - [x] Maintain a coverage-gated policy object in the core.
 - [x] Provide deterministic virtual CPUID/XGETBV responses from the coverage policy; process interception is still pending and AVX remains hidden by default.
+- [x] Add an opt-in main-image CPUID/XGETBV breakpoint patch path for experimental Windows diagnostics; loader/JIT module coverage and native Windows validation remain open.
 - [ ] Intercept guest `CPUID` without changing the host’s physical feature view.
 - [ ] Intercept guest `XGETBV` consistently with the advertised OSXSAVE/XCR0 state.
 - [ ] Keep AVX hidden until process-level AVX execution, state handling, and fault recovery pass their gates.
