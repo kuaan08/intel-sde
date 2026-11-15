@@ -271,11 +271,11 @@ namespace SdeAvxLab
             bool canLaunchTarget = File.Exists(shimPath) && File.Exists(targetPath.Text);
             try
             {
-                string arguments = canLaunchTarget ? "--run-process " + Quote(targetPath.Text) + " " + Quote(shimPath) : "--self-test";
+                string arguments = canLaunchTarget ? "--run-process " + Quote(targetPath.Text) + " " + Quote(shimPath) + (String.IsNullOrWhiteSpace(targetArgs.Text) ? "" : " " + targetArgs.Text.Trim()) : "--self-test";
                 ProcessStartInfo start = new ProcessStartInfo { FileName = runtimePath, Arguments = arguments, WorkingDirectory = canLaunchTarget ? Path.GetDirectoryName(targetPath.Text) : Path.GetDirectoryName(runtimePath), UseShellExecute = false, CreateNoWindow = false };
                 Process proc = Process.Start(start); if (proc == null) throw new InvalidOperationException("Process.Start returned no process");
                 if (canLaunchTarget) { WriteLog("Runtime próprio iniciou o processo com shim AVX. PID host=" + proc.Id + " target=" + targetPath.Text); status.Text = "Processo iniciado"; }
-                else { WriteLog("Runtime próprio iniciou o self-test. Shim ou target ausente; nenhum jogo foi iniciado. PID=" + proc.Id); status.Text = "Self-test executado"; MessageBox.Show(this, "O runtime próprio executou o self-test. Para iniciar um EXE pelo backend próprio, o target e avx_winshim.dll precisam estar disponíveis.\n\nO shim atual cobre somente um subconjunto experimental de AVX1 VEX128 register-only. O Intel SDE permanece disponível como fallback.", "Backend próprio experimental", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+                else { WriteLog("Runtime próprio iniciou o self-test. Shim ou target ausente; nenhum jogo foi iniciado. PID=" + proc.Id); status.Text = "Self-test executado"; MessageBox.Show(this, "O runtime próprio executou o self-test. Para iniciar um EXE pelo backend próprio, o target e avx_winshim.dll precisam estar disponíveis.\n\nO shim atual cobre somente um subconjunto experimental de AVX1 VEX128 com registradores e operandos de memória. Instruções não suportadas ainda podem encerrar o aplicativo. O Intel SDE permanece disponível como fallback.", "Backend próprio experimental", MessageBoxButtons.OK, MessageBoxIcon.Information); }
             }
             catch (Exception ex) { WriteLog("Falha no runtime: " + ex.Message); }
         }

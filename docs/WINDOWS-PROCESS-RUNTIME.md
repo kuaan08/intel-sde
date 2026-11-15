@@ -9,14 +9,15 @@ The independent backend now contains the first process-hosting layer for Windows
 - resumes and waits for the target process;
 - installs a vectored exception handler inside the target;
 - catches `EXCEPTION_ILLEGAL_INSTRUCTION`;
-- emulates a small VEX.128 register-only AVX1 subset through the Windows `CONTEXT` XMM registers;
+- emulates a small VEX.128 AVX1 subset through the Windows `CONTEXT` XMM registers;
+- resolves basic ModRM/SIB, base/index, displacement, and RIP-relative memory operands with guarded reads/writes;
 - supports the initial arithmetic, logical, move, and `VZEROUPPER` forms implemented by the shim.
 
 The launcher uses this path when the own backend is selected and both a target executable and `avx_winshim.dll` are available beside `avx_runtime.exe`. Without the shim, it falls back to the deterministic self-test.
 
 ## Deliberate limits
 
-This is an early process-runtime milestone, not full application compatibility. It does not yet translate VEX memory operands inside another process, AVX.256/YMM upper state, AVX2, CPUID/XGETBV results, indirect control flow, generated code invalidation, loader notifications, or all thread contexts. Unsupported illegal instructions are passed to the next Windows exception handler and the target may terminate normally.
+This is an early process-runtime milestone, not full application compatibility. It does not yet translate AVX.256/YMM upper state, AVX2, CPUID/XGETBV results, indirect control flow, generated code invalidation, loader notifications, or all thread contexts. Unsupported illegal instructions are passed to the next Windows exception handler and the target may terminate normally.
 
 The shim is intentionally conservative. It must never claim that a target is supported merely because it starts. Each new instruction family needs a Windows fixture and a differential result before it can be enabled in the process path.
 

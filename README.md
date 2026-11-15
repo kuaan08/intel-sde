@@ -27,7 +27,7 @@ The current independent core can:
 - execute supported synthetic guest-memory loads and stores;
 - maintain deterministic guest GPR, vector, and memory state for regression tests;
 - expose shared IR, feature-coverage policy, and translated-block cache prototypes;
-- build a Windows process host and an experimental injected VEH shim for a small AVX1 VEX.128 register-only subset;
+- build a Windows process host and an experimental injected VEH shim for a small AVX1 VEX.128 register-and-memory subset;
 - compile a Windows AVX1 guest application fixture without executing it on a no-AVX host;
 - report deterministic interpreter throughput for regression tracking;
 - build and test on Windows x64 and on an x86-64 no-AVX target through QEMU;
@@ -37,7 +37,7 @@ These capabilities are core validation stages. They do not yet mean that an arbi
 
 ### Current engineering boundary
 
-The independent runtime is the primary backend and receives all new implementation work. The next major layers are process executable-memory discovery, basic-block translation, code-cache invalidation, per-thread state, Windows SEH/VEH integration, loader and JIT handling, and coverage-gated `CPUID`/`XGETBV` virtualization.
+The independent runtime is the primary backend and receives all new implementation work. The current process path handles a narrow VEX.128 subset, including guarded basic memory operands, and forwards target arguments. The next major layers are process executable-memory discovery, basic-block translation, code-cache invalidation, per-thread state, Windows SEH/VEH integration, loader and JIT handling, and coverage-gated `CPUID`/`XGETBV` virtualization.
 
 The external Intel SDE backend is intentionally kept separate. It is useful for collecting comparison data or launching a target while the independent process runtime is being completed, but an application running under Intel SDE is not evidence that the SDE AVX Lab backend works.
 
