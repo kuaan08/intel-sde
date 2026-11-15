@@ -11,7 +11,8 @@ Copy-Item (Join-Path $root "avx-runtime\\build-ci\\$Configuration\\avx_runtime.e
 Copy-Item (Join-Path $root "avx-runtime\\build-ci\\$Configuration\\avx_winshim.dll") $stage
 Copy-Item (Join-Path $root "avx-runtime\\build-ci\\$Configuration\\avx1_windows_fixture.exe") $stage
 Copy-Item (Join-Path $root "avx1-sse-poc\\build-ci\\$Configuration\\avx1_sse_poc.exe") $stage
-Copy-Item (Join-Path $root "sde-avx-lab-app\\bin\\SDE AVX Lab.exe") $stage
+Copy-Item (Join-Path $root "sde-avx-lab-app\bin\SDE AVX Lab Native.exe") $stage
+Copy-Item (Join-Path $root "sde-avx-lab-app\bin\Intel SDE Launcher.exe") $stage
 Copy-Item (Join-Path $root "README.md") $stage
 Copy-Item (Join-Path $root "LICENSE") $stage
 Copy-Item (Join-Path $root "THIRD-PARTY-NOTICES.md") $stage

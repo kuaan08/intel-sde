@@ -119,7 +119,8 @@ jobs:
           if (!(Test-Path 'avx-runtime/build-ci/Release/avx_runtime.exe')) { throw 'Runtime executable missing' }
           if (!(Test-Path 'avx-runtime/build-ci/Release/avx1_windows_fixture.exe')) { throw 'Windows AVX1 fixture missing' }
           if (!(Test-Path 'avx-runtime/build-ci/Release/avx_winshim.dll')) { throw 'Windows AVX shim missing' }
-          if (!(Test-Path 'sde-avx-lab-app/bin/SDE AVX Lab.exe')) { throw 'Launcher executable missing' }
+          if (!(Test-Path 'sde-avx-lab-app/bin/SDE AVX Lab Native.exe')) { throw 'Native launcher executable missing' }
+          if (!(Test-Path 'sde-avx-lab-app/bin/Intel SDE Launcher.exe')) { throw 'Intel SDE launcher executable missing' }
 
       - name: Package Windows x64 artifacts
         shell: pwsh

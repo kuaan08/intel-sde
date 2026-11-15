@@ -17,7 +17,14 @@ The launcher is an original Windows application for the SDE AVX Lab independent 
 - independent SDE AVX Lab Runtime as the default backend;
 - Intel SDE 9.58 retained only as a separate fallback backend.
 
-The independent SDE AVX Lab backend is the primary development target. When `avx_winshim.dll` and a target are available, the launcher starts the target through the experimental Windows process host. The current shim covers only a small VEX.128 register-only AVX1 subset; unsupported instructions can still terminate the target. Intel SDE 9.58 remains available as a separate fallback.
+The independent SDE AVX Lab backend is the primary development target. When `avx_winshim.dll` and a target are available, the native launcher starts the target through the experimental Windows process host. The current shim covers only a small VEX.128 register-only AVX1 subset; unsupported instructions can still terminate the target. Intel SDE 9.58 is available through a separate launcher.
+
+The build produces two independent applications:
+
+- `SDE AVX Lab Native.exe` — native backend, process host, shim, self-test, logs, and diagnostics.
+- `Intel SDE Launcher.exe` — Intel SDE-only launcher, profile selection, diagnostics, and official download-page button.
+
+The Intel launcher never silently downloads or redistributes Intel SDE. If `sde.exe` is missing, click `DOWNLOAD SDE`, download the Windows package from Intel's official page, accept Intel's terms, extract it, and select `sde.exe` with `BROWSE`.
 
 ## Build on Windows
 

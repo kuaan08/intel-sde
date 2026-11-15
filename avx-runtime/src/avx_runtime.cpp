@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
     try {
         if (argc == 2 && std::string(argv[1]) == "--self-test") { avxlab::self_test(); return 0; }
         if (argc == 3 && std::string(argv[1]) == "--benchmark") { avxlab::benchmark(static_cast<unsigned>(std::stoul(argv[2]))); return 0; }
-        if (argc == 4 && std::string(argv[1]) == "--run-process") { const int result = avxlab::run_process_with_shim(argv[2], argv[3]); if (result < 0) { std::cerr << "FAIL: Windows process host error " << result << "\n"; return 1; } return result; }
+        if (argc == 4 && std::string(argv[1]) == "--run-process") { const int result = avxlab::run_process_with_shim(argv[2], argv[3]); const std::uint32_t code = static_cast<std::uint32_t>(result); if (code == 0xC000001DU) std::cerr << "FAIL: target stopped with STATUS_ILLEGAL_INSTRUCTION (0xC000001D); the shim encountered an unsupported instruction.\n"; else if (result < 0) std::cerr << "FAIL: Windows process host error " << result << "\n"; return result < 0 ? 1 : result; }
         if (argc == 3 && std::string(argv[1]) == "--decode") { avxlab::Decoded d = avxlab::decode(avxlab::parse_hex(argv[2])); std::cout << "decoded bits=" << d.bits << " dst=ymm" << d.dst << " src1=ymm" << d.src1; if (d.memory) std::cout << " src2=" << avxlab::format_memory_operand(d.memory_operand); else std::cout << " src2=ymm" << d.src2; std::cout << " memory=" << (d.memory ? "yes" : "no") << "\n"; return 0; }
         if (argc == 3 && std::string(argv[1]) == "--run-file") { avxlab::run_file(argv[2]); return 0; }
         std::cerr << "usage: avx_runtime --self-test | --decode \"c5 f0 58 c2\" | --run-file program.txt | --benchmark iterations | --run-process target.exe shim.dll\n"; return 64;

@@ -91,14 +91,19 @@ namespace SdeAvxLab
         private ComboBox backendBox, profileBox;
         private CheckBox mixBox, xinuseBox;
         private Label backendInfo, profileInfo, status;
+        private Button downloadButton;
         private RichTextBox eventLog;
         private string appData;
         private string profileDir;
         private readonly List<CpuProfile> profiles = new List<CpuProfile>();
+        private readonly bool intelOnly;
 
-        public MainForm()
+        public MainForm() : this(false) { }
+
+        public MainForm(bool forceIntelSde)
         {
-            Text = "SDE AVX Lab — Game Compatibility Launcher";
+            intelOnly = forceIntelSde;
+            Text = intelOnly ? "Intel SDE Launcher" : "SDE AVX Lab Native Launcher";
             StartPosition = FormStartPosition.CenterScreen;
             ClientSize = new Size(940, 760);
             MinimumSize = new Size(880, 680);
@@ -156,8 +161,8 @@ namespace SdeAvxLab
             Label version = new Label(); version.Text = "PRIMARY BACKEND  •  EXPERIMENTAL"; version.ForeColor = Color.FromArgb(111, 190, 255); version.TextAlign = ContentAlignment.MiddleRight; version.Location = new Point(760, 28); version.Size = new Size(320, 28); Controls.Add(version);
 
             Panel engine = Card(24, 100, 1072, 116); Controls.Add(engine); LabelOn(engine, "01   EXECUTION BACKEND", 22, 14, 420, 24, true);
-            backendBox = new ComboBox(); backendBox.DropDownStyle = ComboBoxStyle.DropDownList; backendBox.Location = new Point(22, 49); backendBox.Size = new Size(455, 31); backendBox.Items.Add("SDE AVX Lab Runtime (principal; experimental)"); backendBox.Items.Add("Intel SDE 9.58 (fallback externo)"); backendBox.SelectedIndex = 0; backendBox.BackColor = FieldColor; backendBox.ForeColor = Color.White; backendBox.SelectedIndexChanged += BackendChanged; engine.Controls.Add(backendBox);
-            backendInfo = LabelOn(engine, "O runtime próprio é o foco principal. Nesta versão, EXECUTAR roda o self-test; a tradução de processos está em desenvolvimento.", 520, 45, 510, 48, false);
+            backendBox = new ComboBox(); backendBox.DropDownStyle = ComboBoxStyle.DropDownList; backendBox.Location = new Point(22, 49); backendBox.Size = new Size(455, 31); backendBox.Items.Add(intelOnly ? "Intel SDE 9.58 (fallback externo)" : "SDE AVX Lab Runtime (principal; experimental)"); backendBox.SelectedIndex = 0; backendBox.BackColor = FieldColor; backendBox.ForeColor = Color.White; backendBox.SelectedIndexChanged += BackendChanged; engine.Controls.Add(backendBox);
+            backendInfo = LabelOn(engine, intelOnly ? "Launcher separado para iniciar aplicações com o Intel SDE 9.58. Use DOWNLOAD SDE para abrir a página oficial." : "Launcher separado do backend próprio. O runtime inicia o target através do shim experimental quando os arquivos estiverem disponíveis.", 520, 45, 510, 48, false);
 
             Panel files = Card(24, 234, 1072, 244); Controls.Add(files); LabelOn(files, "02   TARGET APPLICATION", 22, 14, 420, 24, true);
             LabelOn(files, "Backend executable", 22, 52, 195, 22, false); sdePath = TextOn(files, 228, 49, 745, 29); ButtonOn(files, "BROWSE", 986, 48, 66, 31, BrowseSde, false);
@@ -173,8 +178,8 @@ namespace SdeAvxLab
             xinuseBox = new CheckBox(); xinuseBox.Text = "-emu-xinuse 0  /  experimental"; xinuseBox.Location = new Point(235, 96); xinuseBox.AutoSize = true; xinuseBox.ForeColor = Color.White; xinuseBox.Checked = false; options.Controls.Add(xinuseBox);
 
             Panel actions = Card(24, 658, 1072, 72); Controls.Add(actions);
-            ButtonOn(actions, "EXECUTE", 22, 16, 145, 40, Launch, true); ButtonOn(actions, "SAVE PROFILE", 180, 16, 125, 40, SaveProfile, false); ButtonOn(actions, "LOAD PROFILE", 318, 16, 135, 40, LoadProfile, false); ButtonOn(actions, "DIAGNOSTICS", 466, 16, 125, 40, Diagnose, false); ButtonOn(actions, "OPEN LOGS", 604, 16, 110, 40, OpenLogs, false);
-            status = LabelOn(actions, "READY", 775, 23, 280, 28, false); status.ForeColor = Color.FromArgb(115, 210, 145); status.TextAlign = ContentAlignment.MiddleRight;
+            ButtonOn(actions, "EXECUTE", 22, 16, 145, 40, Launch, true); ButtonOn(actions, "SAVE PROFILE", 180, 16, 125, 40, SaveProfile, false); ButtonOn(actions, "LOAD PROFILE", 318, 16, 135, 40, LoadProfile, false); ButtonOn(actions, "DIAGNOSTICS", 466, 16, 125, 40, Diagnose, false); ButtonOn(actions, "OPEN LOGS", 604, 16, 110, 40, OpenLogs, false); downloadButton = ButtonOn(actions, "DOWNLOAD SDE", 730, 16, 135, 40, DownloadSde, false); downloadButton.Enabled = intelOnly;
+            status = LabelOn(actions, "READY", 875, 23, 180, 28, false); status.ForeColor = Color.FromArgb(115, 210, 145); status.TextAlign = ContentAlignment.MiddleRight;
 
             Panel logs = Card(24, 750, 1072, 92); Controls.Add(logs); LabelOn(logs, "EVENT LOG", 22, 12, 100, 20, true);
             eventLog = new RichTextBox(); eventLog.Location = new Point(130, 10); eventLog.Size = new Size(922, 70); eventLog.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom; eventLog.BackColor = Color.FromArgb(9, 12, 17); eventLog.ForeColor = Color.FromArgb(180, 198, 218); eventLog.ReadOnly = true; eventLog.BorderStyle = BorderStyle.FixedSingle; logs.Controls.Add(eventLog);
@@ -205,7 +210,7 @@ namespace SdeAvxLab
         private void ProfileChanged(object sender, EventArgs e) { CpuProfile p = profileBox.SelectedItem as CpuProfile; if (p != null) profileInfo.Text = p.Description; }
         private void BackendChanged(object sender, EventArgs e)
         {
-            bool external = backendBox != null && backendBox.SelectedIndex == 1;
+            bool external = IsExternalBackend();
             if (backendInfo != null) backendInfo.Text = external ? "Fallback separado: o Intel SDE inicia o aplicativo selecionado. O desenvolvimento principal continua no runtime próprio." : "O runtime próprio é o foco principal. Nesta versão, o botão EXECUTAR roda o self-test; a tradução de processos está em desenvolvimento.";
             if (sdePath != null) sdePath.Enabled = external;
             if (targetPath != null) targetPath.Enabled = external;
@@ -213,6 +218,15 @@ namespace SdeAvxLab
             if (targetArgs != null) targetArgs.Enabled = external;
             if (mixBox != null) mixBox.Enabled = external;
             if (xinuseBox != null) xinuseBox.Enabled = external;
+        }
+
+        private bool IsExternalBackend() { return intelOnly || (backendBox != null && backendBox.SelectedIndex == 1); }
+
+        private void DownloadSde(object sender, EventArgs e)
+        {
+            const string officialUrl = "https://www.intel.com/content/www/us/en/download/684897/intel-software-development-emulator.html";
+            try { Process.Start(new ProcessStartInfo { FileName = officialUrl, UseShellExecute = true }); WriteLog("Página oficial de download do Intel SDE aberta."); status.Text = "Página oficial aberta"; MessageBox.Show(this, "A página oficial da Intel foi aberta.\n\nBaixe a versão Windows, aceite os termos da Intel e extraia o pacote. Depois selecione sde.exe em BROWSE.", "Download oficial", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+            catch (Exception ex) { WriteLog("Falha ao abrir download oficial: " + ex.Message); }
         }
 
         private bool ValidateCommon()
@@ -225,7 +239,7 @@ namespace SdeAvxLab
 
         private void Launch(object sender, EventArgs e)
         {
-            if (backendBox.SelectedIndex == 0) { RunIndependentBackend(); return; }
+            if (!IsExternalBackend()) { RunIndependentBackend(); return; }
             if (!ValidateCommon()) return;
             if (!File.Exists(sdePath.Text)) { MessageBox.Show(this, "Não encontrei sde.exe. Selecione o arquivo Windows 9.58.", "SDE ausente", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             CpuProfile p = profileBox.SelectedItem as CpuProfile;
@@ -284,7 +298,7 @@ namespace SdeAvxLab
         {
             sdePath.Text = s.SdePath; targetPath.Text = s.TargetPath; workPath.Text = s.WorkingDirectory; targetArgs.Text = s.Arguments; mixBox.Checked = s.Mix; xinuseBox.Checked = s.XInUse;
             for (int i = 0; i < profileBox.Items.Count; i++) if (((CpuProfile)profileBox.Items[i]).Switch == s.Profile) profileBox.SelectedIndex = i;
-            if (!String.IsNullOrWhiteSpace(s.Backend)) backendBox.SelectedIndex = s.Backend.IndexOf("Intel SDE", StringComparison.OrdinalIgnoreCase) >= 0 ? 1 : 0;
+            if (!String.IsNullOrWhiteSpace(s.Backend) && !intelOnly) backendBox.SelectedIndex = s.Backend.IndexOf("Intel SDE", StringComparison.OrdinalIgnoreCase) >= 0 ? 1 : 0;
         }
         private void Diagnose(object sender, EventArgs e)
         {
@@ -302,6 +316,12 @@ namespace SdeAvxLab
     internal static class Program
     {
         [STAThread]
-        private static void Main() { Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false); Application.Run(new MainForm()); }
+        private static void Main() { Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
+#if INTEL_SDE_ONLY
+            Application.Run(new MainForm(true));
+#else
+            Application.Run(new MainForm(false));
+#endif
+        }
     }
 }

@@ -9,9 +9,15 @@ if not exist "%CSC%" (
   exit /b 2
 )
 if not exist bin mkdir bin
-"%CSC%" /nologo /target:winexe /platform:x64 /optimize+ /win32manifest:app.manifest /out:"bin\SDE AVX Lab.exe" /reference:System.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll SDEAvxLabLauncher.cs
-if errorlevel 1 (
-  echo Build failed.
-  exit /b 1
-)
-echo Build complete: "%CD%\bin\SDE AVX Lab.exe"
+set "REFS=/reference:System.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll"
+"%CSC%" /nologo /target:winexe /platform:x64 /optimize+ /win32manifest:app.manifest /out:"bin\SDE AVX Lab Native.exe" %REFS% SDEAvxLabLauncher.cs
+if errorlevel 1 goto fail
+"%CSC%" /nologo /target:winexe /platform:x64 /optimize+ /define:INTEL_SDE_ONLY /win32manifest:app.manifest /out:"bin\Intel SDE Launcher.exe" %REFS% SDEAvxLabLauncher.cs
+if errorlevel 1 goto fail
+echo Build complete:
+echo   "%CD%\bin\SDE AVX Lab Native.exe"
+echo   "%CD%\bin\Intel SDE Launcher.exe"
+exit /b 0
+:fail
+echo Build failed.
+exit /b 1

@@ -42,9 +42,10 @@ if(BUILD_TESTING)
 endif()
 
 if(MSVC)
-  add_executable(avx1_windows_fixture tests/windows_avx1_fixture.cpp)
+  enable_language(ASM_MASM)
+  add_executable(avx1_windows_fixture tests/windows_avx1_fixture.cpp tests/windows_avx1_fixture.asm)
   target_compile_features(avx1_windows_fixture PRIVATE cxx_std_17)
-  target_compile_options(avx1_windows_fixture PRIVATE /W4 /O2 /arch:AVX)
+  target_compile_options(avx1_windows_fixture PRIVATE /W4 /O2 /arch:SSE2)
 
   add_library(avx_winshim SHARED src/windows_avx_shim.cpp)
   target_compile_features(avx_winshim PRIVATE cxx_std_17)
