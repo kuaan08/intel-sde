@@ -13,7 +13,7 @@ This roadmap is the implementation contract for the independent Windows x64 back
 
 **Complete:** VEX decoder prototype, AVX1 packed-single interpreter subset, VEX.128/VEX.256 logical state, ModRM/SIB and RIP-relative address decoding, shared IR data types, cache-generation prototype, feature-coverage policy, Windows build, deterministic tests, CI packaging, and a small VEX.128 VEH fixture.
 
-**In progress:** process-level execution. The current Windows shim is an experimental fault path for a narrow VEX.128 register subset. The core now also has reusable block translation, legacy-SSE lowering, executable-page tracking, thread-state and virtual feature-policy primitives, but it is not yet a general DBT engine and does not enable arbitrary application compatibility.
+**In progress:** process-level execution. The current Windows shim is an experimental fault path for a narrow VEX.128 register subset. The core now also has reusable block translation, a dispatcher prototype with cache/generation/diagnostics, legacy-SSE lowering, executable-page tracking, thread-state and virtual feature-policy primitives, but it is not yet a general Windows DBT engine and does not enable arbitrary application compatibility.
 
 **Not enabled:** process-level AVX advertising, AVX2 advertising, arbitrary-game support, or claims of complete Windows application compatibility.
 
@@ -66,6 +66,7 @@ This roadmap is the implementation contract for the independent Windows x64 back
 - [x] Stop blocks at direct/indirect branches, calls, returns, system instructions, unsupported instructions, and maximum length. Page-boundary splitting and complete indirect-target recovery remain pending.
 - [x] Preserve guest address and source length for every translated instruction.
 - [x] Lower the supported register-register IR subset to legacy SSE4.2 bytes; memory/helper lowering remains pending.
+- [x] Select and cache translated blocks through a dispatcher prototype with source-byte, profile, module, and page-generation identity.
 - [ ] Define a calling convention for helper calls and preserve nonvolatile host registers.
 - [ ] Implement translated-block exits for fall-through, direct branch, indirect branch, call, return, and unsupported-instruction fallback.
 - [ ] Add block-level equivalence tests against the interpreter.

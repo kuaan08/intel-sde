@@ -4,6 +4,7 @@ project(SDE_AVX_Lab_Runtime LANGUAGES CXX)
 set(RUNTIME_CORE_SOURCES
   src/memory_address.cpp
   src/decoder.cpp
+  src/dispatcher.cpp
   src/sse_lowering.cpp
   src/thread_state.cpp
   src/process_runtime.cpp

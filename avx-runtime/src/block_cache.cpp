@@ -12,6 +12,10 @@ std::uint64_t hash_bytes(const std::vector<std::uint8_t>& bytes) {
 }
 }
 
+std::uint64_t hash_block_bytes(const std::vector<std::uint8_t>& bytes) {
+    return hash_bytes(bytes);
+}
+
 bool BlockCacheKey::operator<(const BlockCacheKey& other) const {
     if (module_id != other.module_id) return module_id < other.module_id;
     if (guest_address != other.guest_address) return guest_address < other.guest_address;
@@ -27,7 +31,7 @@ void BlockCache::insert(IRBlock block, std::vector<std::uint8_t> source_bytes) {
 void BlockCache::insert(IRBlock block, std::vector<std::uint8_t> source_bytes,
                         std::uint64_t module_id, std::uint64_t feature_profile,
                         std::uint64_t page_generation) {
-    BlockCacheKey key{module_id, block.start_address, hash_bytes(source_bytes), feature_profile, page_generation};
+    BlockCacheKey key{module_id, block.start_address, hash_block_bytes(source_bytes), feature_profile, page_generation};
     std::lock_guard<std::mutex> lock(mutex_);
     blocks_[key] = Entry{std::move(block), std::move(source_bytes), key};
 }
@@ -42,6 +46,13 @@ const IRBlock* BlockCache::find(const BlockCacheKey& key) const {
     std::lock_guard<std::mutex> lock(mutex_);
     const auto it = blocks_.find(key);
     return it == blocks_.end() ? nullptr : &it->second.block;
+}
+
+std::optional<IRBlock> BlockCache::find_copy(const BlockCacheKey& key) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const auto it = blocks_.find(key);
+    if (it == blocks_.end()) return std::nullopt;
+    return it->second.block;
 }
 
 void BlockCache::invalidate_range(std::uint64_t address, std::size_t size) {

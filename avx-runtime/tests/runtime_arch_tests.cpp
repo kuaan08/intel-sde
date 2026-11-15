@@ -1,6 +1,7 @@
 #include "avx_runtime/block_cache.hpp"
 #include "avx_runtime/block_builder.hpp"
 #include "avx_runtime/decoder.hpp"
+#include "avx_runtime/dispatcher.hpp"
 #include "avx_runtime/executable_memory.hpp"
 #include "avx_runtime/feature_policy.hpp"
 #include "avx_runtime/memory_address.hpp"
@@ -117,6 +118,33 @@ int main() {
     assert((exposed_cpuid.ecx & (1U << 28)) != 0);
     assert((virtual_cpuid(exposed, 7).ebx & (1U << 5)) != 0);
     assert(virtual_xgetbv(exposed, 0, &xcr0) && xcr0 == 6);
+
+    TranslationDispatcher dispatcher(&tracker);
+    const std::vector<std::uint8_t> guest_code = {0xC5, 0xF2, 0x58, 0xC2, 0xC3};
+    const GuestCodeReader reader = [&](std::uint64_t address, std::size_t size,
+                                       std::vector<std::uint8_t>* output) {
+        if (!output || address != 0xD000 || size < guest_code.size()) return false;
+        *output = guest_code;
+        return true;
+    };
+    DispatchRequest request; request.module_id = 1; request.thread_id = 11;
+    request.guest_address = 0xD000; request.feature_profile = 7; request.module = "fixture";
+    const DispatchResult translated_result = dispatcher.dispatch(request, reader);
+    assert(translated_result.status == DispatchStatus::Translated && dispatcher.cache_size() == 1);
+    const DispatchResult cached_result = dispatcher.dispatch(request, reader);
+    assert(cached_result.status == DispatchStatus::CacheHit && cached_result.block.start_address == 0xD000);
+    dispatcher.invalidate_code(0xD000, guest_code.size());
+    const DispatchResult retransformed = dispatcher.dispatch(request, reader);
+    assert(retransformed.status == DispatchStatus::Translated && dispatcher.cache_size() == 1);
+
+    const GuestCodeReader unsupported_reader = [](std::uint64_t, std::size_t,
+                                                   std::vector<std::uint8_t>* output) {
+        *output = {0xC5, 0xF2, 0xFA, 0xC2};
+        return true;
+    };
+    request.guest_address = 0xD100;
+    const DispatchResult unsupported_result = dispatcher.dispatch(request, unsupported_reader);
+    assert(unsupported_result.status == DispatchStatus::Unsupported && !tracker.diagnostics().empty());
 
     std::cout << "PASS: memory addressing, IR blocks, executable-memory invalidation, cache invalidation, and feature gating.\n";
 }

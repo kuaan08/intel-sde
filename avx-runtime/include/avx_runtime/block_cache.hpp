@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 namespace avxlab {
@@ -18,6 +19,8 @@ struct BlockCacheKey {
     bool operator<(const BlockCacheKey& other) const;
 };
 
+std::uint64_t hash_block_bytes(const std::vector<std::uint8_t>& bytes);
+
 class BlockCache {
 public:
     void insert(IRBlock block, std::vector<std::uint8_t> source_bytes);
@@ -26,6 +29,7 @@ public:
                 std::uint64_t page_generation);
     const IRBlock* find(std::uint64_t start_address) const;
     const IRBlock* find(const BlockCacheKey& key) const;
+    std::optional<IRBlock> find_copy(const BlockCacheKey& key) const;
     void invalidate_range(std::uint64_t address, std::size_t size);
     void clear();
     std::size_t size() const;
