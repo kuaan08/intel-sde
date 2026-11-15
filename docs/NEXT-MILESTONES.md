@@ -13,7 +13,7 @@ This roadmap is the implementation contract for the independent Windows x64 back
 
 **Complete:** VEX decoder prototype, AVX1 packed-single interpreter subset, VEX.128/VEX.256 logical state, ModRM/SIB and RIP-relative address decoding, shared IR data types, cache-generation prototype, feature-coverage policy, Windows build, deterministic tests, CI packaging, and a small VEX.128 VEH fixture.
 
-**In progress:** process-level execution. The current Windows shim is an experimental fault path for a narrow VEX.128 register subset. The core now also has reusable block translation, a dispatcher prototype with cache/generation/diagnostics, legacy-SSE lowering, executable-page tracking, thread-state and virtual feature-policy primitives, but it is not yet a general Windows DBT engine and does not enable arbitrary application compatibility.
+**In progress:** process-level execution. The current Windows shim is an experimental fault path for a narrow VEX.128 register subset and now passes controlled CPUID/XGETBV and post-startup JIT fixtures under Wine/QEMU. The core also has reusable block translation, a dispatcher prototype with cache/generation/diagnostics, legacy-SSE lowering, executable-page tracking, thread-state and virtual feature-policy primitives, but it is not yet a general Windows DBT engine and does not enable arbitrary application compatibility.
 
 **Not enabled:** process-level AVX advertising, AVX2 advertising, arbitrary-game support, or claims of complete Windows application compatibility.
 
@@ -86,6 +86,7 @@ This roadmap is the implementation contract for the independent Windows x64 back
 - [ ] Flush the host instruction cache after publishing translated code.
 - [ ] Make cache publication and invalidation safe for concurrent threads.
 - [ ] Add self-modifying-code and JIT regression programs.
+- [x] Add a controlled post-startup JIT regression fixture for supported VEX.128 execution; cache invalidation and translated-code ownership remain pending.
 
 **Acceptance gate:** a program that overwrites an already translated instruction executes the new bytes on the next dispatch without stale-block execution or data races.
 
@@ -101,6 +102,7 @@ This roadmap is the implementation contract for the independent Windows x64 back
 - [x] Discover committed executable regions with `VirtualQuery`; module identity and loader callbacks remain pending.
 - [ ] Handle loader notifications and dynamically loaded modules.
 - [ ] Handle JIT-created executable pages and code invalidation.
+- [x] Execute a controlled JIT-created executable page through the injected VEH shim; general JIT discovery, translation-cache ownership, and invalidation remain pending.
 - [x] Add structured unsupported-opcode diagnostics in the core; controlled SEH/VEH chaining and minidump metadata remain pending.
 - [ ] Define safe behavior for syscalls, callbacks, indirect branches, and native exception unwinding.
 
@@ -113,8 +115,8 @@ This roadmap is the implementation contract for the independent Windows x64 back
 - [x] Maintain a coverage-gated policy object in the core.
 - [x] Provide deterministic virtual CPUID/XGETBV responses from the coverage policy; process interception is still pending and AVX remains hidden by default.
 - [x] Add an opt-in main-image CPUID/XGETBV breakpoint patch path for experimental Windows diagnostics; loader/JIT module coverage and native Windows validation remain open.
-- [ ] Intercept guest `CPUID` without changing the host’s physical feature view.
-- [ ] Intercept guest `XGETBV` consistently with the advertised OSXSAVE/XCR0 state.
+- [x] Intercept guest `CPUID` without changing the host’s physical feature view in the opt-in main-image path and controlled fixture.
+- [x] Intercept guest `XGETBV` consistently with the advertised OSXSAVE/XCR0 state in the opt-in main-image path and controlled fixture.
 - [ ] Keep AVX hidden until process-level AVX execution, state handling, and fault recovery pass their gates.
 - [ ] Keep AVX2 hidden until integer/vector AVX2 coverage and differential tests pass.
 - [ ] Add probes for CPUID leaves, OSXSAVE, XCR0, and unsupported-feature refusal.

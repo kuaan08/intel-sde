@@ -1,6 +1,7 @@
 #include "avx_runtime/process_runtime.hpp"
 
 #include <algorithm>
+#include <unordered_set>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -12,6 +13,7 @@ namespace avxlab {
 std::size_t ProcessRuntimeTracker::refresh() {
 #ifdef _WIN32
     std::size_t discovered = 0;
+    std::unordered_set<std::uint64_t> live_bases;
     std::uint8_t* cursor = nullptr;
     MEMORY_BASIC_INFORMATION information{};
     while (VirtualQuery(cursor, &information, sizeof(information)) == sizeof(information)) {
@@ -20,12 +22,21 @@ std::size_t ProcessRuntimeTracker::refresh() {
                                 protection == PAGE_EXECUTE_READWRITE || protection == PAGE_EXECUTE_WRITECOPY;
         if (information.State == MEM_COMMIT && executable) {
             const auto base = reinterpret_cast<std::uint64_t>(information.BaseAddress);
-            if (!executable_memory_.find(base)) executable_memory_.register_region(base, information.RegionSize);
+            live_bases.insert(base);
+            const ExecutableRegion* known = executable_memory_.find(base);
+            if (!known || known->size != information.RegionSize) {
+                executable_memory_.register_region(base, information.RegionSize);
+            }
             ++discovered;
         }
         const auto next = reinterpret_cast<std::uintptr_t>(information.BaseAddress) + information.RegionSize;
         if (next <= reinterpret_cast<std::uintptr_t>(cursor)) break;
         cursor = reinterpret_cast<std::uint8_t*>(next);
+    }
+    for (const ExecutableRegion& region : executable_memory_.snapshot()) {
+        if (live_bases.find(region.base) == live_bases.end()) {
+            executable_memory_.unregister_region(region.base);
+        }
     }
     return discovered;
 #else

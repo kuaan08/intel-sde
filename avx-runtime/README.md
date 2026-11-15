@@ -17,8 +17,9 @@ This directory contains the correctness-first core of the independent SDE AVX La
 - sequential instruction programs stored as text files;
 - deterministic state digest output;
 - shared IR data types, coverage policy, and translated-block cache invalidation prototype.
+- Windows CPUID/XGETBV and post-startup JIT fixtures validated under Wine/QEMU with a Conroe CPU model.
 
-The synthetic memory machine is a core test harness, not yet a process-level Windows DBT. It must not be advertised as finished game compatibility until guest process memory, executable-page discovery, basic-block translation, code-cache invalidation, thread/exception integration, and CPUID/XGETBV interception are complete.
+The synthetic memory machine and the Windows fixtures are correctness harnesses, not yet a complete process-level Windows DBT. They must not be advertised as finished game compatibility until guest process memory, general executable-page discovery, basic-block execution, code-cache ownership and invalidation, thread/exception integration, loader/JIT coverage, and broad instruction semantics are complete.
 
 ## Linux build and test
 
@@ -74,5 +75,5 @@ The detailed phase plan, dependencies, and acceptance gates are maintained in [`
 4. lower the shared IR to SSE4.2/scalar host sequences and compare every block with the interpreter;
 5. connect the block cache to executable process pages and self-modifying-code invalidation;
 6. implement safe Windows guest-memory access, per-thread state, loader/JIT discovery, and controlled SEH/VEH chaining;
-7. add CPUID/XGETBV virtualization only after process execution coverage is sufficient;
+7. generalize the controlled CPUID/XGETBV path across loader and JIT modules without exposing unsupported coverage;
 8. build the AVX1 Windows application suite before enabling AVX2 milestones.

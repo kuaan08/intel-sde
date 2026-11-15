@@ -23,6 +23,7 @@ This is a cross-emulated validation environment. It is not native Windows 10, na
 | Direct Xenia | Xenia under Wine/QEMU Conroe without the SDE AVX Lab shim | Process initialized far enough to load its configuration and remained active until the timeout. |
 | Launcher, default mode | SDE AVX Lab process host without `SDE_AVX_LAB_EXPERIMENTAL_CPUID=1` | Target process started, but no AVX translation or complete DBT was demonstrated. |
 | CPUID fixture | Windows fixture under the launcher with `SDE_AVX_LAB_EXPERIMENTAL_CPUID=1` | **PASS**: virtual AVX/OSXSAVE and `XCR0=0x6`; exit status 0. |
+| Post-startup JIT fixture | Fixture allocates writable memory, publishes it as executable, emits VEX.128 `VADDPS`, and executes through the injected shim | **PASS**: `11.0 22.0 33.0 44.0`; exit status 0. |
 | Xenia, CPUID opt-in | Xenia under the launcher with `SDE_AVX_LAB_EXPERIMENTAL_CPUID=1` | The previous breakpoint failure was fixed. Xenia remained active through the 45-second timeout without the AVX startup rejection or an unhandled `INT3` from the feature-query path. |
 
 The CPUID fixture printed the following result:
@@ -45,4 +46,6 @@ The 45-second Xenia timeout is therefore a liveness observation, not a compatibi
 
 ## Next engineering gate
 
-The next required milestone is a controlled JIT fixture that allocates executable memory, emits a known VEX instruction after process startup, and verifies that the process host discovers, decodes, translates, and executes that block. Only after this passes should the project attempt broader Xenia JIT coverage and differential testing.
+The controlled JIT fixture now passes through the injected VEH path. It proves that a supported VEX.128 instruction in a page created after process startup can be intercepted and executed. It does not yet prove that the process host discovers the page, creates an owned translated block, caches it, invalidates it after a write, or translates arbitrary Xenia JIT blocks. Those are the next gates before broader Xenia JIT coverage and differential testing.
+
+The process tracker was also hardened to retain live executable-region generations, notice region-size changes, and remove regions no longer returned by `VirtualQuery`. This core behavior is covered by the no-AVX build, but remote-process write hooks and target-side cache ownership still require a Windows integration gate.
