@@ -66,7 +66,19 @@ namespace SdeAvxLab
         }
 
         private static string Escape(string value) { return (value ?? "").Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n"); }
-        private static string Unescape(string value) { return (value ?? "").Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\\\", "\\"); }
+        private static string Unescape(string value)
+        {
+            StringBuilder result = new StringBuilder(); string text = value ?? "";
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (text[i] == '\\' && i + 1 < text.Length)
+                {
+                    char next = text[++i]; if (next == 'n') result.Append('\n'); else if (next == 'r') result.Append('\r'); else result.Append(next);
+                }
+                else result.Append(text[i]);
+            }
+            return result.ToString();
+        }
     }
 
     internal sealed class MainForm : Form
@@ -177,13 +189,14 @@ namespace SdeAvxLab
         {
             string here = AppDomain.CurrentDomain.BaseDirectory;
             string[] candidates = {
+                Path.GetFullPath(Path.Combine(here, "..", "..", "windows-9.58", "sde.exe")),
                 Path.GetFullPath(Path.Combine(here, "..", "..", "intel-sde", "windows-9.58", "sde.exe")),
                 Path.GetFullPath(Path.Combine(here, "..", "intel-sde", "windows-9.58", "sde.exe")),
                 Path.GetFullPath(Path.Combine(here, "..", "windows-9.58", "sde.exe")),
                 @"C:\Sde\sde.exe"
             };
             foreach (string p in candidates) if (File.Exists(p)) { sdePath.Text = p; break; }
-            if (String.IsNullOrWhiteSpace(sdePath.Text)) sdePath.Text = candidates[1];
+            if (String.IsNullOrWhiteSpace(sdePath.Text)) sdePath.Text = candidates[0];
         }
 
         private void BrowseSde(object sender, EventArgs e) { PickFile(sdePath, "Selecione sde.exe", "sde.exe|sde.exe|Executáveis|*.exe|Todos|*.*"); }
@@ -205,8 +218,8 @@ namespace SdeAvxLab
 
         private void Launch(object sender, EventArgs e)
         {
-            if (!ValidateCommon()) return;
             if (backendBox.SelectedIndex == 0) { RunIndependentBackend(); return; }
+            if (!ValidateCommon()) return;
             if (!File.Exists(sdePath.Text)) { MessageBox.Show(this, "Não encontrei sde.exe. Selecione o arquivo Windows 9.58.", "SDE ausente", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             CpuProfile p = profileBox.SelectedItem as CpuProfile;
             string args = p.Switch;
@@ -231,19 +244,20 @@ namespace SdeAvxLab
                 Path.Combine(here, "..", "avx_runtime.exe"),
                 Path.Combine(here, "avx_runtime.exe")
             };
-            string poc = ""; foreach (string p in candidates) if (File.Exists(p)) { poc = Path.GetFullPath(p); break; }
-            if (poc == "") { WriteLog("Runtime próprio selecionado, mas avx_runtime.exe não está compilado."); MessageBox.Show(this, "O runtime próprio ainda precisa ser compilado no Windows. Execute avx-runtime\\Build-Windows.bat e tente novamente.", "Runtime experimental", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-            try { Process proc = Process.Start(new ProcessStartInfo { FileName = poc, Arguments = "--self-test", WorkingDirectory = Path.GetDirectoryName(poc), UseShellExecute = false, CreateNoWindow = false }); WriteLog("Runtime próprio iniciou o self-test. PID=" + proc.Id); status.Text = "Runtime em execução"; } catch (Exception ex) { WriteLog("Falha no runtime: " + ex.Message); }
+            string runtimePath = ""; foreach (string p in candidates) if (File.Exists(p)) { runtimePath = Path.GetFullPath(p); break; }
+            if (runtimePath == "") { WriteLog("Runtime próprio selecionado, mas avx_runtime.exe não está compilado."); MessageBox.Show(this, "O runtime próprio ainda precisa ser compilado no Windows. Execute avx-runtime\\Build-Windows.bat e tente novamente.", "Runtime experimental", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+            try { Process proc = Process.Start(new ProcessStartInfo { FileName = runtimePath, Arguments = "--self-test", WorkingDirectory = Path.GetDirectoryName(runtimePath), UseShellExecute = false, CreateNoWindow = false }); if (proc == null) throw new InvalidOperationException("Process.Start returned no process"); WriteLog("Runtime próprio iniciou o self-test. PID=" + proc.Id); status.Text = "Runtime em execução"; } catch (Exception ex) { WriteLog("Falha no runtime: " + ex.Message); }
         }
 
         private void SaveProfile(object sender, EventArgs e)
         {
             if (!ValidateCommon()) return; string name = Path.GetFileNameWithoutExtension(targetPath.Text); foreach (char c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
-            string path = Path.Combine(profileDir, name + ".profile"); File.WriteAllText(path, CaptureSettings().Serialize(), Encoding.UTF8); WriteLog("Perfil salvo: " + path); status.Text = "Perfil salvo";
+            try { string path = Path.Combine(profileDir, name + ".profile"); File.WriteAllText(path, CaptureSettings().Serialize(), Encoding.UTF8); WriteLog("Perfil salvo: " + path); status.Text = "Perfil salvo"; }
+            catch (Exception ex) { WriteLog("Falha ao salvar perfil: " + ex.Message); MessageBox.Show(this, ex.Message, "Falha ao salvar perfil", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
         private void LoadProfile(object sender, EventArgs e)
         {
-            using (OpenFileDialog d = new OpenFileDialog()) { d.InitialDirectory = profileDir; d.Filter = "Perfis SDE AVX Lab|*.profile|Todos|*.*"; if (d.ShowDialog(this) != DialogResult.OK) return; Apply(LauncherSettings.Parse(File.ReadAllText(d.FileName, Encoding.UTF8))); WriteLog("Perfil carregado: " + d.FileName); }
+            using (OpenFileDialog d = new OpenFileDialog()) { d.InitialDirectory = profileDir; d.Filter = "Perfis SDE AVX Lab|*.profile|Todos|*.*"; if (d.ShowDialog(this) != DialogResult.OK) return; try { Apply(LauncherSettings.Parse(File.ReadAllText(d.FileName, Encoding.UTF8))); WriteLog("Perfil carregado: " + d.FileName); } catch (Exception ex) { WriteLog("Falha ao carregar perfil: " + ex.Message); MessageBox.Show(this, ex.Message, "Falha ao carregar perfil", MessageBoxButtons.OK, MessageBoxIcon.Error); } }
         }
         private LauncherSettings CaptureSettings()
         {
@@ -257,12 +271,13 @@ namespace SdeAvxLab
         }
         private void Diagnose(object sender, EventArgs e)
         {
-            StringBuilder b = new StringBuilder(); b.AppendLine("SDE AVX Lab diagnóstico"); b.AppendLine("Data: " + DateTime.Now); b.AppendLine("OS: " + Environment.OSVersion); b.AppendLine("64-bit OS: " + Environment.Is64BitOperatingSystem); b.AppendLine("SDE: " + sdePath.Text + " => " + File.Exists(sdePath.Text)); b.AppendLine("Jogo: " + targetPath.Text + " => " + File.Exists(targetPath.Text)); b.AppendLine("Backend: " + backendBox.Text); b.AppendLine("Perfil: " + ((CpuProfile)profileBox.SelectedItem).Switch); string path = Path.Combine(appData, "diagnostic-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".txt"); File.WriteAllText(path, b.ToString(), Encoding.UTF8); WriteLog("Diagnóstico salvo: " + path); MessageBox.Show(this, b.ToString() + "\nArquivo: " + path, "Diagnóstico", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            try { StringBuilder b = new StringBuilder(); b.AppendLine("SDE AVX Lab diagnóstico"); b.AppendLine("Data: " + DateTime.Now); b.AppendLine("OS: " + Environment.OSVersion); b.AppendLine("64-bit OS: " + Environment.Is64BitOperatingSystem); b.AppendLine("SDE: " + sdePath.Text + " => " + File.Exists(sdePath.Text)); b.AppendLine("Jogo: " + targetPath.Text + " => " + File.Exists(targetPath.Text)); b.AppendLine("Backend: " + backendBox.Text); b.AppendLine("Perfil: " + ((CpuProfile)profileBox.SelectedItem).Switch); string path = Path.Combine(appData, "diagnostic-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".txt"); File.WriteAllText(path, b.ToString(), Encoding.UTF8); WriteLog("Diagnóstico salvo: " + path); MessageBox.Show(this, b.ToString() + "\nArquivo: " + path, "Diagnóstico", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+            catch (Exception ex) { WriteLog("Falha ao gerar diagnóstico: " + ex.Message); MessageBox.Show(this, ex.Message, "Falha no diagnóstico", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
         private void OpenLogs(object sender, EventArgs e) { Directory.CreateDirectory(appData); Process.Start(new ProcessStartInfo { FileName = appData, UseShellExecute = true }); }
         private void WriteLog(string text)
         {
-            Directory.CreateDirectory(appData); string line = "[" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "] " + text + Environment.NewLine; File.AppendAllText(Path.Combine(appData, "launcher.log"), line, Encoding.UTF8); if (eventLog != null) { eventLog.AppendText(line); eventLog.SelectionStart = eventLog.Text.Length; eventLog.ScrollToCaret(); }
+            string line = "[" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "] " + text + Environment.NewLine; try { Directory.CreateDirectory(appData); File.AppendAllText(Path.Combine(appData, "launcher.log"), line, Encoding.UTF8); } catch { } if (eventLog != null) { eventLog.AppendText(line); eventLog.SelectionStart = eventLog.Text.Length; eventLog.ScrollToCaret(); }
         }
         private static string Quote(string value) { return "\"" + (value ?? "").Replace("\"", "\\\"") + "\""; }
     }

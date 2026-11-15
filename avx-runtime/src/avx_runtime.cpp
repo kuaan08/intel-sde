@@ -31,7 +31,8 @@ Decoded decode(const std::vector<std::uint8_t>& b) {
         std::uint8_t p = b[1]; map = 1; r = ((p >> 7) & 1U) ^ 1U; v = (p >> 3) & 15U; l = (p >> 2) & 1U; pp = p & 3U; off = 2;
     } else if (b[0] == 0xC4) {
         if (b.size() < 4) fail("truncated VEX3 instruction");
-        std::uint8_t p0 = b[1], p1 = b[2]; map = p0 & 31U; r = ((p0 >> 7) & 1U) ^ 1U; bx = ((p0 >> 5) & 1U) ^ 1U; w = (p1 >> 7) & 1U; v = (p1 >> 3) & 15U; l = (p1 >> 2) & 1U; pp = p1 & 3U; off = 3;
+        std::uint8_t p0 = b[1], p1 = b[2]; map = p0 & 31U; r = ((p0 >> 7) & 1U) ^ 1U; unsigned x = ((p0 >> 6) & 1U) ^ 1U; bx = ((p0 >> 5) & 1U) ^ 1U; w = (p1 >> 7) & 1U; v = (p1 >> 3) & 15U; l = (p1 >> 2) & 1U; pp = p1 & 3U; off = 3;
+        if (x != 0) fail("VEX.X is reserved for register-only forms");
     } else fail("not a VEX instruction");
     if (map != 1 || pp != 0 || w != 0 || off >= b.size()) fail("unsupported VEX form");
     if (b[off] == 0x77) {
@@ -44,9 +45,10 @@ Decoded decode(const std::vector<std::uint8_t>& b) {
     switch (b[off]) {
     case 0x58: op = Op::AddPS; break; case 0x5C: op = Op::SubPS; break; case 0x59: op = Op::MulPS; break; case 0x5E: op = Op::DivPS; break;
     case 0x57: op = Op::XorPS; break; case 0x54: op = Op::AndPS; break; case 0x56: op = Op::OrPS; break;
-    case 0x10: case 0x28: if (v != 15) fail("invalid VMOV reserved vvvv"); op = Op::Move; break;
+    case 0x10: case 0x28: case 0x11: case 0x29: if (v != 15) fail("invalid VMOV reserved vvvv"); op = Op::Move; break;
     default: fail("unsupported AVX1 opcode");
     }
+    if (op == Op::Move && (b[off] == 0x11 || b[off] == 0x29)) return {op, rm, 0, reg, bits};
     if (op == Op::Move) return {op, reg, 0, rm, bits};
     return {op, reg, src1, rm, bits};
 }
@@ -70,7 +72,12 @@ void execute(const Decoded& d, VectorState& s) {
 }
 
 static std::vector<std::uint8_t> parse_hex(const std::string& text) {
-    std::string compact; for (char c : text) if (c != ' ' && c != '\t' && c != ':') compact += c;
+    std::string compact;
+    for (char c : text) {
+        if (std::isspace(static_cast<unsigned char>(c)) || c == ':') continue;
+        if (!std::isxdigit(static_cast<unsigned char>(c))) fail("invalid hexadecimal character in input");
+        compact += c;
+    }
     if (compact.size() % 2) fail("hex input must have an even number of digits");
     std::vector<std::uint8_t> out;
     for (std::size_t i = 0; i < compact.size(); i += 2)
@@ -113,7 +120,7 @@ int main(int argc, char** argv) {
     try {
         if (argc == 2 && std::string(argv[1]) == "--self-test") { avxlab::self_test(); return 0; }
         if (argc == 3 && std::string(argv[1]) == "--decode") { avxlab::Decoded d = avxlab::decode(avxlab::parse_hex(argv[2])); std::cout << "decoded bits=" << d.bits << " dst=ymm" << d.dst << " src1=ymm" << d.src1 << " src2=ymm" << d.src2 << "\n"; return 0; }
-        if (argc == 3 && std::string(argv[1]) == "--run-file") return avxlab::run_file(argv[2]) == 0 ? 1 : 0;
+        if (argc == 3 && std::string(argv[1]) == "--run-file") { avxlab::run_file(argv[2]); return 0; }
         std::cerr << "usage: avx_runtime --self-test | --decode \"c5 f0 58 c2\" | --run-file program.txt\n"; return 64;
     } catch (const std::exception& e) { std::cerr << "FAIL: " << e.what() << '\n'; return 1; }
 }

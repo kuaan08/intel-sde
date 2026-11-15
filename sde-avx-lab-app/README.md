@@ -45,7 +45,7 @@ The launcher automatically searches for `avx_runtime.exe` in `avx-runtime\build-
 
 ## First external comparison test
 
-1. Keep the official package at `..\intel-sde\windows-9.58` or select `sde.exe` manually.
+1. Keep the official package at `..\windows-9.58` in this repository checkout or select `sde.exe` manually.
 2. Start the launcher.
 3. Select the target executable, such as `xenia_canary.exe`.
 4. Select the external comparison backend.

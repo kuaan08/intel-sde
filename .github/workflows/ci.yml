@@ -1,0 +1,106 @@
+name: SDE AVX Lab CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sde-avx-lab-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-no-avx:
+    name: Linux x86-64 no-AVX runtime and SSE POC
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout project sources only
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            avx-runtime
+            avx1-sse-poc
+            docs
+            README.md
+            LICENSE
+            THIRD-PARTY-NOTICES.md
+          sparse-checkout-cone-mode: true
+
+      - name: Install cross toolchain and emulators
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++-x86-64-linux-gnu binutils-x86-64-linux-gnu qemu-user
+
+      - name: Test independent interpreter
+        working-directory: avx-runtime
+        env:
+          CXX: x86_64-linux-gnu-g++
+          QEMU: qemu-x86_64
+          OBJDUMP: x86_64-linux-gnu-objdump
+          QEMU_LD_PREFIX: /usr/x86_64-linux-gnu
+        run: ./tests/run-tests.sh
+
+      - name: Test AVX1 to SSE lowering POC
+        working-directory: avx1-sse-poc
+        env:
+          CXX: x86_64-linux-gnu-g++
+          OBJDUMP: x86_64-linux-gnu-objdump
+          QEMU: qemu-x86_64
+          QEMU_CPU: max,-avx,-avx2,-xsave
+          QEMU_LD_PREFIX: /usr/x86_64-linux-gnu
+        run: ./tests/run-tests.sh
+
+      - name: CMake configure and CTest
+        run: |
+          cmake -S avx-runtime -B avx-runtime/build-ci \
+            -DCMAKE_CXX_COMPILER=x86_64-linux-gnu-g++ \
+            -DCMAKE_CXX_FLAGS='-mno-avx -mno-avx2 -mno-fma -mno-avx512f' \
+            -DSDE_AVX_TEST_RUNNER=/usr/bin/qemu-x86_64 \
+            "-DSDE_AVX_TEST_RUNNER_ARGS=-L /usr/x86_64-linux-gnu"
+          cmake --build avx-runtime/build-ci --parallel
+          ctest --test-dir avx-runtime/build-ci --output-on-failure
+
+  windows-x64:
+    name: Windows x64 runtime, POC, and launcher build
+    runs-on: windows-2022
+    steps:
+      - name: Checkout project sources only
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            avx-runtime
+            avx1-sse-poc
+            sde-avx-lab-app
+            docs
+            README.md
+            LICENSE
+            THIRD-PARTY-NOTICES.md
+          sparse-checkout-cone-mode: true
+
+      - name: Configure independent runtime
+        run: cmake -S avx-runtime -B avx-runtime/build-ci -A x64
+
+      - name: Build independent runtime
+        run: cmake --build avx-runtime/build-ci --config Release --parallel
+
+      - name: Run independent runtime self-test
+        run: avx-runtime/build-ci/Release/avx_runtime.exe --self-test
+
+      - name: Configure AVX1 to SSE POC
+        run: cmake -S avx1-sse-poc -B avx1-sse-poc/build-ci -A x64
+
+      - name: Build AVX1 to SSE POC
+        run: cmake --build avx1-sse-poc/build-ci --config Release --parallel
+
+      - name: Build Windows launcher source
+        shell: cmd
+        run: sde-avx-lab-app\Build.bat
+
+      - name: Verify generated Windows artifacts
+        shell: pwsh
+        run: |
+          if (!(Test-Path 'avx-runtime/build-ci/Release/avx_runtime.exe')) { throw 'Runtime executable missing' }
+          if (!(Test-Path 'sde-avx-lab-app/bin/SDE AVX Lab.exe')) { throw 'Launcher executable missing' }

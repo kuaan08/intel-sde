@@ -13,6 +13,16 @@ mkdir -p "$BUILD"
 "$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --self-test
 "$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --decode "c4 41 34 58 e6"
 "$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --run-file "$ROOT/tests/sample-program.txt"
+printf '# CRLF portability test\r\nc5 f0 58 c2\r\n' > "$BUILD/crlf-program.txt"
+"$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --run-file "$BUILD/crlf-program.txt"
+if "$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --decode "c4 01 34 58 e6"; then
+  echo 'ERROR: reserved VEX.X encoding was accepted' >&2
+  exit 1
+fi
+if "$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --decode "c5 f0 58 c-"; then
+  echo 'ERROR: invalid hexadecimal input was accepted' >&2
+  exit 1
+fi
 if "$OBJDUMP" -d "$BUILD/avx_runtime" | grep -Eiq '\b(v[a-z][a-z0-9]*)\b'; then
   echo 'ERROR: V-prefixed AVX mnemonic found in runtime binary' >&2
   exit 1

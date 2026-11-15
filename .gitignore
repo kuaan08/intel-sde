@@ -2,3 +2,9 @@
 /downloads/
 # Local audit output can be regenerated.
 /lab/sde-kit-audit.log
+# Project-generated build trees and local test output.
+/avx-runtime/build/
+/avx-runtime/build-*/
+/avx1-sse-poc/build/
+/avx1-sse-poc/build-*/
+/sde-avx-lab-app/build-validation/

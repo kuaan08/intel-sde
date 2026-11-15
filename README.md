@@ -2,6 +2,8 @@
 
 ## Independent AVX Compatibility Runtime for Windows x64
 
+[![CI](https://github.com/kuaan08/intel-sde/actions/workflows/ci.yml/badge.svg)](https://github.com/kuaan08/intel-sde/actions/workflows/ci.yml)
+
 SDE AVX Lab is an independent research and engineering project for running selected x86-64 applications that require Intel Advanced Vector Extensions on host processors without physical AVX support.
 
 The project is designed for Windows 10/11 x64 systems, including low-power machines such as the Intel Celeron N5100. Its long-term goal is to provide an independent dynamic binary translation runtime that can decode incompatible VEX instructions, preserve architectural state, and execute equivalent SSE4.2-compatible code on the host.
@@ -38,10 +40,9 @@ sde-gaming-4f6209bb/
 │   └── Build-Windows.bat         Windows x64 build script
 ├── avx1-sse-poc/                AVX1-to-legacy-SSE proof of concept
 ├── sde-avx-lab-app/             Windows WinForms launcher source
-├── intel-sde/                   Optional external Intel SDE reference kit
-│   ├── windows-9.58/             Official Windows package kept intact
-│   ├── linux-9.14/               Historical Linux reference package
-│   └── lab/                      Non-invasive package audit tools
+├── windows-9.58/                Optional external Intel SDE Windows package
+├── linux-9.14/                  Historical Linux reference package
+├── lab/                         Non-invasive package audit tools
 ├── docs/                        Project architecture and engineering notes
 ├── LICENSE                      License for original SDE AVX Lab files
 └── THIRD-PARTY-NOTICES.md       External package and license boundaries
@@ -105,6 +106,10 @@ cd avx-runtime
 
 On the ARM64 development sandbox, the test script uses an x86-64 cross-compiler and QEMU user-mode. It disables AVX, AVX2, FMA, and AVX-512 code generation and verifies that the generated runtime contains no V-prefixed AVX instructions.
 
+## Continuous integration
+
+GitHub Actions runs `.github/workflows/ci.yml` on pushes and pull requests. The Linux job uses the x86-64 cross-compiler and QEMU to test the interpreter and AVX1-to-SSE proof of concept without AVX. The Windows job builds the independent runtime, the SSE POC, and the WinForms launcher with x64 toolchains. Generated build trees are excluded from version control.
+
 ## Example instruction program
 
 `avx-runtime/tests/sample-program.txt` contains a small independent program:
@@ -131,6 +136,8 @@ The project is being developed in layers:
 8. **Game compatibility layer** — adds per-application profiles, diagnostics, telemetry, and safe fallbacks.
 
 The runtime must never advertise AVX or AVX2 through CPUID/XGETBV until the corresponding execution coverage is implemented and tested.
+
+The public Intel SDE capability comparison and independent implementation plan are documented in [docs/INTEL-SDE-FEATURE-MAP.md](docs/INTEL-SDE-FEATURE-MAP.md).
 
 ## Planned instruction coverage
 
@@ -165,9 +172,9 @@ Opening a game window is not evidence of playable compatibility. Results must re
 
 ## Optional Intel SDE reference package
 
-The `intel-sde` directory is not the project runtime. It is kept intact for authorized external comparison and documentation review. The Windows package is located at `intel-sde/windows-9.58/`; the historical Linux package is at `intel-sde/linux-9.14/`.
+The `windows-9.58` and `linux-9.14` directories are not the project runtime. They are kept intact for authorized external comparison and documentation review.
 
-The Intel packages are governed by their own license terms. They are not modified, patched, reverse engineered, or used as a source of copied implementation code. See `THIRD-PARTY-NOTICES.md` and `intel-sde/lab/README.md`.
+The Intel packages are governed by their own license terms. They are not modified, patched, reverse engineered, or used as a source of copied implementation code. See `THIRD-PARTY-NOTICES.md` and `lab/README.md`.
 
 ## Legal and engineering boundary
 

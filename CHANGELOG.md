@@ -2,6 +2,13 @@
 
 ## Unreleased — Independent runtime milestone
 
+- Added GitHub Actions CI for Linux no-AVX/QEMU, Windows x64, CMake, the SSE POC, and the C# launcher.
+- Fixed CRLF handling and strict hexadecimal validation in the runtime program parser.
+- Rejected reserved VEX.X encodings in register-only VEX3 forms.
+- Added register-register VMOV store-form decoding to align the runtime with the SSE POC.
+- Made `--run-file` return success after any valid program, including an empty/comment-only program.
+- Made the CMake build work on non-x86 hosts and made CTest runner arguments configurable.
+- Hardened launcher profile serialization and filesystem error handling.
 - Added an independent VEX AVX1 interpreter runtime.
 - Added VEX.128 and VEX.256 register-only decoding.
 - Added packed-single arithmetic, logical operations, register moves, and `VZEROUPPER`.
