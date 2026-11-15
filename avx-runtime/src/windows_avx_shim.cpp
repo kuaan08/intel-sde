@@ -6,8 +6,8 @@
 
 namespace {
 
-M128* xmm_register(CONTEXT* context, unsigned index) {
-    M128* registers[] = {&context->Xmm0, &context->Xmm1, &context->Xmm2, &context->Xmm3, &context->Xmm4, &context->Xmm5, &context->Xmm6, &context->Xmm7, &context->Xmm8, &context->Xmm9, &context->Xmm10, &context->Xmm11, &context->Xmm12, &context->Xmm13, &context->Xmm14, &context->Xmm15};
+M128A* xmm_register(CONTEXT* context, unsigned index) {
+    M128A* registers[] = {&context->Xmm0, &context->Xmm1, &context->Xmm2, &context->Xmm3, &context->Xmm4, &context->Xmm5, &context->Xmm6, &context->Xmm7, &context->Xmm8, &context->Xmm9, &context->Xmm10, &context->Xmm11, &context->Xmm12, &context->Xmm13, &context->Xmm14, &context->Xmm15};
     return index < 16 ? registers[index] : nullptr;
 }
 
@@ -22,9 +22,9 @@ bool emulate_vex128(CONTEXT* context) {
     const std::uint8_t opcode = ip[2];
     if (opcode == 0x77) { context->Rip += 3; return true; }
     if (mod != 3 || dst >= 16 || src1 >= 16 || src2 >= 8) return false;
-    M128* destination = xmm_register(context, dst);
-    M128* first = xmm_register(context, src1);
-    M128* second = xmm_register(context, src2);
+    M128A* destination = xmm_register(context, dst);
+    M128A* first = xmm_register(context, src1);
+    M128A* second = xmm_register(context, src2);
     if (!destination || !first || !second) return false;
     std::array<std::uint8_t, 16> a{}, b{}, result{};
     std::memcpy(a.data(), first, 16); std::memcpy(b.data(), second, 16);
