@@ -59,11 +59,12 @@ MemoryOperand decode_memory_operand(const std::uint8_t* bytes, std::size_t size,
 }
 
 std::string format_memory_operand(const MemoryOperand& operand) {
+    static const char* names[] = {"rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"};
     std::ostringstream out; out << '[';
     if (operand.rip_relative) out << "rip";
-    else if (operand.has_base) out << "r" << static_cast<unsigned>(operand.base);
+    else if (operand.has_base) out << names[operand.base & 15U];
     else out << "absolute";
-    if (operand.has_index) out << "+r" << static_cast<unsigned>(operand.index) << '*' << static_cast<unsigned>(operand.scale);
+    if (operand.has_index) out << '+' << names[operand.index & 15U] << '*' << static_cast<unsigned>(operand.scale);
     if (operand.displacement > 0) out << '+' << operand.displacement;
     else if (operand.displacement < 0) out << operand.displacement;
     out << ']'; return out.str();
