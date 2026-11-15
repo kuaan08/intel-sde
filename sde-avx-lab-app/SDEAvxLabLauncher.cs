@@ -150,39 +150,34 @@ namespace SdeAvxLab
 
         private void BuildUi()
         {
-            Label title = new Label(); title.Text = "SDE AVX Lab"; title.Font = new Font("Segoe UI Semibold", 24F, FontStyle.Bold);
-            title.Location = new Point(28, 18); title.Size = new Size(500, 42); Controls.Add(title);
-            Label sub = new Label(); sub.Text = "Launcher de compatibilidade para jogos x64 — Windows 10/11";
-            sub.ForeColor = Color.FromArgb(160, 174, 193); sub.Location = new Point(32, 61); sub.Size = new Size(700, 24); Controls.Add(sub);
+            ClientSize = new Size(1120, 840); MinimumSize = new Size(980, 720); AutoScroll = true;
+            Label title = new Label(); title.Text = "SDE AVX Lab"; title.Font = new Font("Segoe UI Semibold", 25F, FontStyle.Bold); title.Location = new Point(30, 20); title.Size = new Size(500, 42); Controls.Add(title);
+            Label subtitle = new Label(); subtitle.Text = "AVX compatibility runtime  /  Windows x64"; subtitle.ForeColor = Color.FromArgb(147, 164, 187); subtitle.Location = new Point(34, 63); subtitle.Size = new Size(650, 24); Controls.Add(subtitle);
+            Label version = new Label(); version.Text = "PRIMARY BACKEND  •  EXPERIMENTAL"; version.ForeColor = Color.FromArgb(111, 190, 255); version.TextAlign = ContentAlignment.MiddleRight; version.Location = new Point(760, 28); version.Size = new Size(320, 28); Controls.Add(version);
 
-            Panel engine = Card(24, 98, 892, 112); Controls.Add(engine); LabelOn(engine, "1. Backend de execução", 16, 12, 400, 24, true);
-            backendBox = new ComboBox(); backendBox.DropDownStyle = ComboBoxStyle.DropDownList; backendBox.Location = new Point(17, 46); backendBox.Size = new Size(390, 30);
-            backendBox.Items.Add("SDE AVX Lab Runtime (principal; experimental)"); backendBox.Items.Add("Intel SDE 9.58 (fallback externo)"); backendBox.SelectedIndex = 0; backendBox.BackColor = FieldColor; backendBox.ForeColor = Color.White; backendBox.SelectedIndexChanged += BackendChanged; engine.Controls.Add(backendBox);
-            backendInfo = LabelOn(engine, "O runtime próprio é o foco principal. Nesta versão, o botão EXECUTAR roda o self-test; a tradução de processos está em desenvolvimento.", 430, 48, 440, 48, false);
+            Panel engine = Card(24, 100, 1072, 116); Controls.Add(engine); LabelOn(engine, "01   EXECUTION BACKEND", 22, 14, 420, 24, true);
+            backendBox = new ComboBox(); backendBox.DropDownStyle = ComboBoxStyle.DropDownList; backendBox.Location = new Point(22, 49); backendBox.Size = new Size(455, 31); backendBox.Items.Add("SDE AVX Lab Runtime (principal; experimental)"); backendBox.Items.Add("Intel SDE 9.58 (fallback externo)"); backendBox.SelectedIndex = 0; backendBox.BackColor = FieldColor; backendBox.ForeColor = Color.White; backendBox.SelectedIndexChanged += BackendChanged; engine.Controls.Add(backendBox);
+            backendInfo = LabelOn(engine, "O runtime próprio é o foco principal. Nesta versão, EXECUTAR roda o self-test; a tradução de processos está em desenvolvimento.", 520, 45, 510, 48, false);
 
-            Panel files = Card(24, 222, 892, 178); Controls.Add(files); LabelOn(files, "2. Arquivos e processo", 16, 12, 400, 24, true);
-            LabelOn(files, "SDE / executável do backend:", 17, 45, 210, 24, false); sdePath = TextOn(files, 220, 42, 560, 28); ButtonOn(files, "Procurar", 790, 41, 84, 30, BrowseSde, false);
-            LabelOn(files, "Jogo ou aplicação (.exe):", 17, 82, 210, 24, false); targetPath = TextOn(files, 220, 79, 560, 28); ButtonOn(files, "Procurar", 790, 78, 84, 30, BrowseTarget, false);
-            LabelOn(files, "Diretório de trabalho:", 17, 119, 210, 24, false); workPath = TextOn(files, 220, 116, 560, 28); ButtonOn(files, "Pasta", 790, 115, 84, 30, BrowseWork, false);
-            LabelOn(files, "Argumentos do jogo:", 17, 156, 210, 24, false); targetArgs = TextOn(files, 220, 153, 654, 28);
+            Panel files = Card(24, 234, 1072, 244); Controls.Add(files); LabelOn(files, "02   TARGET APPLICATION", 22, 14, 420, 24, true);
+            LabelOn(files, "Backend executable", 22, 52, 195, 22, false); sdePath = TextOn(files, 228, 49, 745, 29); ButtonOn(files, "BROWSE", 986, 48, 66, 31, BrowseSde, false);
+            LabelOn(files, "Target application", 22, 93, 195, 22, false); targetPath = TextOn(files, 228, 90, 745, 29); ButtonOn(files, "BROWSE", 986, 89, 66, 31, BrowseTarget, false);
+            LabelOn(files, "Working directory", 22, 134, 195, 22, false); workPath = TextOn(files, 228, 131, 745, 29); ButtonOn(files, "FOLDER", 986, 130, 66, 31, BrowseWork, false);
+            LabelOn(files, "Application arguments", 22, 175, 195, 22, false); targetArgs = TextOn(files, 228, 172, 824, 29);
+            LabelOn(files, "The primary runtime currently executes deterministic core tests. Select the external fallback only when you need to launch an arbitrary target.", 228, 207, 824, 22, false);
 
-            Panel options = Card(24, 412, 892, 142); Controls.Add(options); LabelOn(options, "3. Perfil e opções", 16, 12, 400, 24, true);
-            profileBox = new ComboBox(); profileBox.DropDownStyle = ComboBoxStyle.DropDownList; profileBox.Location = new Point(17, 47); profileBox.Size = new Size(390, 30); profileBox.BackColor = FieldColor; profileBox.ForeColor = Color.White;
-            foreach (CpuProfile p in profiles) profileBox.Items.Add(p); profileBox.SelectedIndex = 0; profileBox.SelectedIndexChanged += ProfileChanged; options.Controls.Add(profileBox);
-            profileInfo = LabelOn(options, profiles[0].Description, 430, 48, 430, 32, false);
-            mixBox = new CheckBox(); mixBox.Text = "Gerar relatório -mix"; mixBox.Location = new Point(20, 90); mixBox.AutoSize = true; mixBox.ForeColor = Color.White; mixBox.Checked = false; options.Controls.Add(mixBox);
-            xinuseBox = new CheckBox(); xinuseBox.Text = "-emu-xinuse 0 (experimental)"; xinuseBox.Location = new Point(220, 90); xinuseBox.AutoSize = true; xinuseBox.ForeColor = Color.White; options.Controls.Add(xinuseBox);
+            Panel options = Card(24, 496, 1072, 142); Controls.Add(options); LabelOn(options, "03   CPU PROFILE & OPTIONS", 22, 14, 420, 24, true);
+            profileBox = new ComboBox(); profileBox.DropDownStyle = ComboBoxStyle.DropDownList; profileBox.Location = new Point(22, 49); profileBox.Size = new Size(455, 31); profileBox.BackColor = FieldColor; profileBox.ForeColor = Color.White; foreach (CpuProfile p in profiles) profileBox.Items.Add(p); profileBox.SelectedIndex = 0; profileBox.SelectedIndexChanged += ProfileChanged; options.Controls.Add(profileBox);
+            profileInfo = LabelOn(options, profiles[0].Description, 520, 49, 510, 28, false);
+            mixBox = new CheckBox(); mixBox.Text = "Generate -mix report"; mixBox.Location = new Point(25, 96); mixBox.AutoSize = true; mixBox.ForeColor = Color.White; mixBox.Checked = false; options.Controls.Add(mixBox);
+            xinuseBox = new CheckBox(); xinuseBox.Text = "-emu-xinuse 0  /  experimental"; xinuseBox.Location = new Point(235, 96); xinuseBox.AutoSize = true; xinuseBox.ForeColor = Color.White; xinuseBox.Checked = false; options.Controls.Add(xinuseBox);
 
-            Panel actions = Card(24, 568, 892, 78); Controls.Add(actions);
-            ButtonOn(actions, "EXECUTAR", 16, 17, 150, 42, Launch, true);
-            ButtonOn(actions, "Salvar perfil", 178, 17, 120, 42, SaveProfile, false);
-            ButtonOn(actions, "Carregar perfil", 308, 17, 130, 42, LoadProfile, false);
-            ButtonOn(actions, "Diagnóstico", 448, 17, 120, 42, Diagnose, false);
-            ButtonOn(actions, "Abrir pasta de logs", 578, 17, 150, 42, OpenLogs, false);
-            status = LabelOn(actions, "Pronto.", 744, 24, 135, 30, false); status.ForeColor = Color.FromArgb(115, 210, 145);
+            Panel actions = Card(24, 658, 1072, 72); Controls.Add(actions);
+            ButtonOn(actions, "EXECUTE", 22, 16, 145, 40, Launch, true); ButtonOn(actions, "SAVE PROFILE", 180, 16, 125, 40, SaveProfile, false); ButtonOn(actions, "LOAD PROFILE", 318, 16, 135, 40, LoadProfile, false); ButtonOn(actions, "DIAGNOSTICS", 466, 16, 125, 40, Diagnose, false); ButtonOn(actions, "OPEN LOGS", 604, 16, 110, 40, OpenLogs, false);
+            status = LabelOn(actions, "READY", 775, 23, 280, 28, false); status.ForeColor = Color.FromArgb(115, 210, 145); status.TextAlign = ContentAlignment.MiddleRight;
 
-            Panel logs = Card(24, 660, 892, 82); Controls.Add(logs); LabelOn(logs, "Eventos", 16, 8, 100, 20, true);
-            eventLog = new RichTextBox(); eventLog.Location = new Point(110, 8); eventLog.Size = new Size(764, 62); eventLog.BackColor = Color.FromArgb(9, 12, 17); eventLog.ForeColor = Color.FromArgb(180, 198, 218); eventLog.ReadOnly = true; eventLog.BorderStyle = BorderStyle.FixedSingle; logs.Controls.Add(eventLog);
+            Panel logs = Card(24, 750, 1072, 92); Controls.Add(logs); LabelOn(logs, "EVENT LOG", 22, 12, 100, 20, true);
+            eventLog = new RichTextBox(); eventLog.Location = new Point(130, 10); eventLog.Size = new Size(922, 70); eventLog.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom; eventLog.BackColor = Color.FromArgb(9, 12, 17); eventLog.ForeColor = Color.FromArgb(180, 198, 218); eventLog.ReadOnly = true; eventLog.BorderStyle = BorderStyle.FixedSingle; logs.Controls.Add(eventLog);
             BackendChanged(null, EventArgs.Empty);
         }
 
