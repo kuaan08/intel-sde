@@ -18,13 +18,30 @@ std::wstring widen(const std::string& value) {
     return result;
 }
 
+bool absolute_path(const std::wstring& input, std::wstring* output) {
+    if (input.empty() || !output) return false;
+    const DWORD required = GetFullPathNameW(input.c_str(), 0, nullptr, nullptr);
+    if (required == 0) return false;
+    std::wstring buffer(static_cast<std::size_t>(required), L'\0');
+    const DWORD written = GetFullPathNameW(input.c_str(), required, &buffer[0], nullptr);
+    if (written == 0 || written >= required) return false;
+    buffer.resize(static_cast<std::size_t>(written));
+    *output = buffer;
+    return true;
+}
+
 } // namespace
 
 int run_process_with_shim(const std::string& target_path, const std::string& shim_path,
                           const std::string& target_arguments) {
-    const std::wstring target = widen(target_path);
-    const std::wstring shim = widen(shim_path);
-    if (target.empty() || shim.empty()) return -1;
+    const std::wstring target_input = widen(target_path);
+    const std::wstring shim_input = widen(shim_path);
+    std::wstring target;
+    std::wstring shim;
+    if (!absolute_path(target_input, &target)) return -11;
+    if (!absolute_path(shim_input, &shim)) return -12;
+    if (GetFileAttributesW(target.c_str()) == INVALID_FILE_ATTRIBUTES) return -13;
+    if (GetFileAttributesW(shim.c_str()) == INVALID_FILE_ATTRIBUTES) return -14;
 
     std::wstring command = L"\"" + target + L"\"";
     if (!target_arguments.empty()) command += L" " + widen(target_arguments);
@@ -32,7 +49,7 @@ int run_process_with_shim(const std::string& target_path, const std::string& shi
     command_buffer.push_back(L'\0');
     STARTUPINFOW startup{}; startup.cb = sizeof(startup);
     PROCESS_INFORMATION process{};
-    if (!CreateProcessW(nullptr, command_buffer.data(), nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr, nullptr, &startup, &process)) return -2;
+    if (!CreateProcessW(target.c_str(), command_buffer.data(), nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr, nullptr, &startup, &process)) return -2;
 
     const SIZE_T bytes = (shim.size() + 1) * sizeof(wchar_t);
     void* remote_path = VirtualAllocEx(process.hProcess, nullptr, bytes, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
