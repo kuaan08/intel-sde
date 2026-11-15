@@ -1,0 +1,7 @@
+# Independent SDE AVX Lab runtime program: VADDPS then VXORPS then VZEROUPPER
+# VADDPS xmm0,xmm1,xmm2
+c5 f0 58 c2
+# VXORPS ymm3,ymm3,ymm3
+c5 e4 57 db
+# VZEROUPPER
+c5 f8 77

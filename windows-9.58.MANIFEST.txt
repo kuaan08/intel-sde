@@ -1,0 +1,31 @@
+SDE AVX Lab — official Intel Windows package record
+
+Source URL:
+https://downloadmirror.intel.com/859732/sde-external-9.58.0-2025-06-16-win.tar.xz
+
+Intel Download Center page:
+https://www.intel.com/content/www/us/en/download/684897/859732/intel-software-development-emulator.html
+
+Package:
+sde-external-9.58.0-2025-06-16-win.tar.xz
+
+Published SHA-256:
+EBB8B3B63FCB0B6C1F9721118BA4883703D2AED9E0DB2DEFED4E44FBA78D9CA9
+
+Extracted directory:
+windows-9.58/
+
+Observed metadata after extraction:
+- sde.exe: Intel Software Development Emulator 9.58.0 external (0)
+- target layouts: ia32 and intel64
+- package includes documentation, licenses, CPUID profiles and Pin/SDE support files
+
+Extracted principal-file SHA-256:
+f309b90a75697296bd7e92ade119bf0d86f3e03badf3594f45d1ee8d35c11426  windows-9.58/sde.exe
+b3aebe15080e689f9aced153eeb1df625d848c4c6ad2ca95516dfc9519d5eb84  windows-9.58/xed.exe
+4d534ce7e9d2ba445636120eecc8819c70d67d0d7f59d70cd9e89adb272579e3  windows-9.58/intel64/pin.exe
+ec90d8480c62c0c300a85717dad57abe887bea9d7bb2a6aaea98f4d1b0eb14c7  windows-9.58/intel64/sde-mix-mt.dll
+cb2816ccd26af75d31db4a46c78a42730b85f71cf05e3fc65a27a0932cb885c6  windows-9.58/ia32/pin.exe
+f7a56df9b1bbddfbcd9f4e3e7c2a8ef9bba71fc4d4e8df6050f882594b1c4572  windows-9.58/ia32/sde-mix-mt.dll
+
+The archive itself is intentionally not stored in this Git working tree after extraction. The extracted package is retained locally under the Intel license and must not be redistributed without following the applicable Intel license terms.

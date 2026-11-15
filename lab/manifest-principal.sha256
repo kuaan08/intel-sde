@@ -1,0 +1,7 @@
+# Hashes gerados pelo SDE AVX Lab para o clone local; não substituem a verificação oficial das assinaturas Intel.
+2fa5ee1959ce05f11db14f902756e5395107bfd0e70948e5c7f1a756198f33ae  sde
+45dfba9ab9a941ebdc69cc4882b4cbc1e6bdd519dd8a05eff930409d8bf8b64b  sde64
+87ce883de2f696b0c38526d608ab51ac01c861e30618713cb78dee2d0b752007  xed
+97e1fdf721a08138f34bc72bf46e078855a1e578c9cb534578cdb73a2bcea41c  xed64
+4f0a832c3bcf1cced8b5d47124207884a4ff55ded3406b153ff706f32640a81f  intel64/pinbin
+805f3a240af22d9041cc300d348777a0008b19c895254b8041377e57d89883ee  intel64/sde-mix-mt.so

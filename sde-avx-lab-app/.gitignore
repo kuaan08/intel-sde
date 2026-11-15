@@ -1,0 +1,5 @@
+# Generated local user data
+*.profile
+*.log
+# Temporary validation/build folders
+build-validation/

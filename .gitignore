@@ -1,0 +1,4 @@
+# Official Intel package archive is kept outside version control after extraction.
+/downloads/
+# Local audit output can be regenerated.
+/lab/sde-kit-audit.log

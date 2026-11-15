@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.16)
+project(SDE_AVX_Lab_Runtime LANGUAGES CXX)
+
+add_executable(avx_runtime src/avx_runtime.cpp)
+target_compile_features(avx_runtime PRIVATE cxx_std_17)
+
+if(MSVC)
+  target_compile_options(avx_runtime PRIVATE /W4 /O2 /arch:SSE2)
+else()
+  target_compile_options(avx_runtime PRIVATE -Wall -Wextra -Wpedantic -O2 -march=x86-64 -msse4.2 -mno-avx -mno-avx2 -mno-fma -mno-avx512f -fno-tree-vectorize -fno-lto)
+endif()
+
+include(CTest)
+if(BUILD_TESTING)
+  set(SDE_AVX_TEST_RUNNER "" CACHE STRING "Optional emulator command, e.g. /usr/bin/qemu-x86_64")
+  if(SDE_AVX_TEST_RUNNER)
+    add_test(NAME independent_avx_runtime_self_test COMMAND ${SDE_AVX_TEST_RUNNER} -L /usr/x86_64-linux-gnu $<TARGET_FILE:avx_runtime> --self-test)
+  else()
+    add_test(NAME independent_avx_runtime_self_test COMMAND avx_runtime --self-test)
+  endif()
+endif()
