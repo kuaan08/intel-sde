@@ -27,7 +27,7 @@ namespace SdeAvxLab
         public string WorkingDirectory = "";
         public string Arguments = "";
         public string Profile = "-snb";
-        public string Backend = "SDE AVX Lab Runtime (self-test; não inicia jogos)";
+        public string Backend = "SDE AVX Lab Runtime (principal; experimental)";
         public bool Mix;
         public bool XInUse;
 
@@ -157,8 +157,8 @@ namespace SdeAvxLab
 
             Panel engine = Card(24, 98, 892, 112); Controls.Add(engine); LabelOn(engine, "1. Backend de execução", 16, 12, 400, 24, true);
             backendBox = new ComboBox(); backendBox.DropDownStyle = ComboBoxStyle.DropDownList; backendBox.Location = new Point(17, 46); backendBox.Size = new Size(390, 30);
-            backendBox.Items.Add("SDE AVX Lab Runtime (self-test; não inicia jogos)"); backendBox.Items.Add("Intel SDE 9.58 (inicia jogos)"); backendBox.SelectedIndex = 0; backendBox.BackColor = FieldColor; backendBox.ForeColor = Color.White; backendBox.SelectedIndexChanged += BackendChanged; engine.Controls.Add(backendBox);
-            backendInfo = LabelOn(engine, "O runtime próprio executa somente o self-test AVX1. Para iniciar o Xenia, selecione Intel SDE 9.58.", 430, 48, 440, 48, false);
+            backendBox.Items.Add("SDE AVX Lab Runtime (principal; experimental)"); backendBox.Items.Add("Intel SDE 9.58 (fallback externo)"); backendBox.SelectedIndex = 0; backendBox.BackColor = FieldColor; backendBox.ForeColor = Color.White; backendBox.SelectedIndexChanged += BackendChanged; engine.Controls.Add(backendBox);
+            backendInfo = LabelOn(engine, "O runtime próprio é o foco principal. Nesta versão, o botão EXECUTAR roda o self-test; a tradução de processos está em desenvolvimento.", 430, 48, 440, 48, false);
 
             Panel files = Card(24, 222, 892, 178); Controls.Add(files); LabelOn(files, "2. Arquivos e processo", 16, 12, 400, 24, true);
             LabelOn(files, "SDE / executável do backend:", 17, 45, 210, 24, false); sdePath = TextOn(files, 220, 42, 560, 28); ButtonOn(files, "Procurar", 790, 41, 84, 30, BrowseSde, false);
@@ -211,7 +211,7 @@ namespace SdeAvxLab
         private void BackendChanged(object sender, EventArgs e)
         {
             bool external = backendBox != null && backendBox.SelectedIndex == 1;
-            if (backendInfo != null) backendInfo.Text = external ? "O Intel SDE externo inicia o aplicativo selecionado com o perfil de CPU escolhido." : "O runtime próprio executa somente o self-test AVX1. Para iniciar o Xenia, selecione Intel SDE 9.58.";
+            if (backendInfo != null) backendInfo.Text = external ? "Fallback separado: o Intel SDE inicia o aplicativo selecionado. O desenvolvimento principal continua no runtime próprio." : "O runtime próprio é o foco principal. Nesta versão, o botão EXECUTAR roda o self-test; a tradução de processos está em desenvolvimento.";
             if (sdePath != null) sdePath.Enabled = external;
             if (targetPath != null) targetPath.Enabled = external;
             if (workPath != null) workPath.Enabled = external;
@@ -258,7 +258,7 @@ namespace SdeAvxLab
             };
             string runtimePath = ""; foreach (string p in candidates) if (File.Exists(p)) { runtimePath = Path.GetFullPath(p); break; }
             if (runtimePath == "") { WriteLog("Runtime próprio selecionado, mas avx_runtime.exe não está compilado."); MessageBox.Show(this, "O runtime próprio ainda precisa ser compilado no Windows. Execute avx-runtime\\Build-Windows.bat e tente novamente.", "Runtime experimental", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-            try { Process proc = Process.Start(new ProcessStartInfo { FileName = runtimePath, Arguments = "--self-test", WorkingDirectory = Path.GetDirectoryName(runtimePath), UseShellExecute = false, CreateNoWindow = false }); if (proc == null) throw new InvalidOperationException("Process.Start returned no process"); WriteLog("Runtime próprio iniciou o self-test. Nenhum jogo foi iniciado. PID=" + proc.Id); status.Text = "Self-test executado"; MessageBox.Show(this, "O runtime próprio ainda não inicia jogos. O self-test AVX1 foi executado.\n\nPara iniciar o Xenia, selecione 'Intel SDE 9.58 (inicia jogos)'.", "Backend experimental", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch (Exception ex) { WriteLog("Falha no runtime: " + ex.Message); }
+            try { Process proc = Process.Start(new ProcessStartInfo { FileName = runtimePath, Arguments = "--self-test", WorkingDirectory = Path.GetDirectoryName(runtimePath), UseShellExecute = false, CreateNoWindow = false }); if (proc == null) throw new InvalidOperationException("Process.Start returned no process"); WriteLog("Runtime próprio iniciou o self-test. Nenhum jogo foi iniciado. PID=" + proc.Id); status.Text = "Self-test executado"; MessageBox.Show(this, "O runtime próprio é o backend principal, mas ainda está na fase de núcleo/testes e não inicia jogos arbitrários. O self-test AVX1 foi executado.\n\nO Intel SDE permanece disponível somente como fallback externo.", "Backend próprio experimental", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch (Exception ex) { WriteLog("Falha no runtime: " + ex.Message); }
         }
 
         private void SaveProfile(object sender, EventArgs e)
