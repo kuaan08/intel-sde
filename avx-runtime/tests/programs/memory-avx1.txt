@@ -1,0 +1,4 @@
+# VADDPS xmm0,xmm1,[rax] with the test machine's RAX-backed guest memory
+c5 f0 58 00
+# VMOVUPS [rcx],xmm0 with the test machine's RCX-backed guest memory
+c5 f8 11 01

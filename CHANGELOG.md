@@ -2,6 +2,7 @@
 
 ## Unreleased — Independent runtime milestone
 
+- Integrated synthetic guest-memory execution into the independent AVX1 interpreter for supported loads, stores, ModRM/SIB, displacement, and RIP-relative forms.
 - Documented the independent runtime as the primary backend and Intel SDE 9.58 as an isolated optional fallback.
 - Clarified that the independent launcher backend runs a self-test only and does not launch game processes.
 - Added an explicit external Intel SDE launch label and backward-compatible loading of older profile names.

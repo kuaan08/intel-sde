@@ -25,9 +25,10 @@ The current independent runtime can:
 - maintain 16 logical YMM registers;
 - execute instruction programs stored in text files;
 - produce deterministic state checksums;
+- execute deterministic synthetic guest-memory loads and stores;
 - run tests compiled with AVX disabled on the host toolchain.
 
-The current runtime is not yet a full process-level DBT and must not be advertised as a finished game emulator. Memory operands are currently decoded into a shared IR prototype, while execution of guest memory and process interception are still under development. A block-cache and coverage-gating prototype is present; JIT code support, Windows exception integration, and broad AVX/AVX2 coverage are not complete.
+The current runtime is not yet a full process-level DBT and must not be advertised as a finished game emulator. Memory operands now execute against a deterministic synthetic guest-memory harness, while process-memory access and interception are still under development. A block-cache and coverage-gating prototype is present; JIT code support, Windows exception integration, and broad AVX/AVX2 coverage are not complete.
 
 ## Repository layout
 
