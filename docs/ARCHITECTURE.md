@@ -42,12 +42,15 @@ The application layer stores per-game policies, selects the minimum required gue
 
 ## Development sequence
 
-1. Expand decoder and fixtures.
-2. Add memory operands and address calculation.
-3. Build a common IR.
-4. Add interpreter execution for the IR.
-5. Add SSE lowering for the same IR.
-6. Add block cache and invalidation.
-7. Integrate Windows process execution.
-8. Add CPUID/XGETBV policy gating.
-9. Measure applications and games only after controlled tests pass.
+The authoritative phase plan and acceptance criteria are maintained in
+[`NEXT-MILESTONES.md`](NEXT-MILESTONES.md). The architecture sequence is:
+
+1. complete decoder validation, IR metadata, and AVX1 semantic coverage;
+2. translate straight-line blocks and define all control-flow exits;
+3. lower the same IR to SSE4.2/scalar host sequences and compare with the interpreter;
+4. connect executable-page discovery, generation-aware caching, and self-modifying-code invalidation;
+5. integrate per-thread Windows state, loader/JIT handling, and controlled SEH/VEH chaining;
+6. implement CPUID/XGETBV virtualization only after execution coverage is sufficient;
+7. validate the native backend with the Windows AVX1 application suite;
+8. expand AVX2 and optimize only behind differential and no-AVX host gates;
+9. measure real applications only after the controlled process gates pass.

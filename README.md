@@ -238,25 +238,38 @@ Use only software and application files that you are authorized to use. No games
 
 ## Roadmap
 
+The roadmap is divided into executable phases with dependencies and acceptance gates in [Next Engineering Milestones](docs/NEXT-MILESTONES.md). The compact status below is intentionally conservative: a prototype is not marked complete when its process-level acceptance gate is still missing.
+
+### Completed foundations
+
 - [x] Independent VEX decoder prototype
-- [x] AVX1 register and synthetic-memory interpreter prototype
-- [x] AVX1-to-SSE register-only proof of concept
-- [x] ModRM/SIB memory operands and x64 addressing decoder
-- [x] Shared IR data model and cache invalidation prototype
-- [x] Shared IR integration with complete decoded instructions for linear programs
-- [ ] Basic-block translation and control-flow boundaries
-- [x] Executable-region map and write-generation invalidation prototype
-- [x] Windows process host and VEX128 VEH shim prototype
-- [ ] Windows thread, loader, JIT, and complete exception runtime
+- [x] AVX1 register and synthetic-memory interpreter subset
+- [x] VEX.128/VEX.256 logical vector state and upper-lane rules
+- [x] ModRM/SIB, displacement, and RIP-relative x64 address decoding
+- [x] Shared IR data model and linear-program integration
 - [x] Coverage-gated feature policy prototype
+- [x] Executable-region and write-generation cache prototype
+- [x] Deterministic AVX1 regression programs and Windows VEX fixture
+- [x] Windows CI, dual launchers, and release packaging
+- [x] Interpreter throughput benchmark prototype
+
+### In progress
+
+- [ ] IR read/write-set, memory, alignment, and exception metadata
+- [ ] Decoder negative tests and broader AVX1 semantic coverage
+- [ ] Basic-block translation and control-flow exits
+- [ ] SSE4.2/scalar lowering from shared IR
+- [ ] Process executable-page discovery and cache invalidation
+- [ ] Per-thread state, loader/JIT handling, SEH/VEH chaining, and diagnostics
 - [ ] Process-level CPUID/XGETBV virtualization
-- [x] Deterministic AVX1 regression programs
-- [x] Windows AVX1 guest fixture compilation
+
+### Planned after the process gates
+
 - [ ] AVX1 Windows application test suite
-- [ ] AVX2 implementation milestones
-- [x] Windows CI build and release packaging
-- [x] Interpreter benchmark prototype
-- [ ] Performance tuning and benchmark suite
+- [ ] Differential AVX-capable reference matrix
+- [ ] AVX2 decoder, interpreter, lowering, and coverage milestones
+- [ ] Hot-block optimization and complete benchmark suite
+- [ ] Versioned profiles, diagnostic bundles, and compatibility release workflow
 
 ## Acknowledgements
 

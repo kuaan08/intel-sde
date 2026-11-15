@@ -66,9 +66,13 @@ The runtime seeds guest vectors, GPRs, and memory, executes the sequence, and pr
 
 ## Next implementation layers
 
-1. expose decoded instructions as shared IR objects;
-2. translate complete straight-line blocks and identify control-flow boundaries;
-3. connect the block cache to executable process pages and self-modifying-code invalidation;
-4. implement safe Windows guest-memory access and per-thread machine state;
-5. add process interception, loader/JIT discovery, SEH/VEH, and CPUID/XGETBV virtualization;
-6. gate AVX1 process support on differential tests and add AVX2 milestones.
+The detailed phase plan, dependencies, and acceptance gates are maintained in [`docs/NEXT-MILESTONES.md`](../docs/NEXT-MILESTONES.md). The immediate sequence is:
+
+1. complete IR read/write, memory, alignment, and exception metadata;
+2. add decoder negative tests and broaden the AVX1 semantic subset;
+3. translate complete straight-line blocks and identify control-flow boundaries;
+4. lower the shared IR to SSE4.2/scalar host sequences and compare every block with the interpreter;
+5. connect the block cache to executable process pages and self-modifying-code invalidation;
+6. implement safe Windows guest-memory access, per-thread state, loader/JIT discovery, and controlled SEH/VEH chaining;
+7. add CPUID/XGETBV virtualization only after process execution coverage is sufficient;
+8. build the AVX1 Windows application suite before enabling AVX2 milestones.
