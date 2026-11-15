@@ -28,6 +28,7 @@ The current independent core can:
 - execute VEX.128 and VEX.256 packed-single operations without AVX host instructions;
 - emulate `VADDPS`, `VSUBPS`, `VMULPS`, `VDIVPS`, `VXORPS`, `VANDPS`, and `VORPS`;
 - emulate `VMOVUPS`, `VMOVAPS`, and `VZEROUPPER`;
+- interpret the initial VEX scalar-single subset: `VMOVSS`, `VADDSS`, `VSUBSS`, `VMULSS`, and `VDIVSS`, including scalar lane preservation and YMM upper-lane clearing;
 - maintain 16 logical YMM registers with correct 128-bit upper-lane clearing;
 - decode ModRM/SIB, displacements, and RIP-relative x64 addressing;
 - execute supported synthetic guest-memory loads and stores;
@@ -163,7 +164,7 @@ VORPS        VZEROUPPER
 
 The current memory harness uses deterministic guest registers and memory only for core validation. It is not a substitute for reading and writing another Windows process. Process-level memory access will be implemented with explicit range checks, page handling, executable-page tracking, and invalidation tests.
 
-The next instruction milestones are scalar forms, integer AVX operations, conversions, broadcasts, permutations, and AVX2 integer/vector operations. Each instruction requires semantic tests, differential checks, and a host-code audit.
+The next instruction milestones are broader scalar forms, integer AVX operations, conversions, broadcasts, permutations, and AVX2 integer/vector operations. The scalar-single subset above is only a first slice; each additional instruction requires semantic tests, differential checks, and a host-code audit.
 
 ## Windows launcher
 

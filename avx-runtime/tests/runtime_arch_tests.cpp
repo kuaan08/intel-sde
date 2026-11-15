@@ -1,5 +1,6 @@
 #include "avx_runtime/block_cache.hpp"
 #include "avx_runtime/block_builder.hpp"
+#include "avx_runtime/decoder.hpp"
 #include "avx_runtime/executable_memory.hpp"
 #include "avx_runtime/feature_policy.hpp"
 #include "avx_runtime/memory_address.hpp"
@@ -81,6 +82,17 @@ int main() {
     const auto memory_block = translate_basic_block({0xC5, 0xF0, 0x58, 0x00}, 0xC000);
     const auto memory_sse = lower_block_to_legacy_sse(memory_block.block);
     assert(!memory_sse.supported && memory_sse.diagnostic.find("memory") != std::string::npos);
+
+    const Decoded scalar_decoded = decode(parse_hex("c5 f2 58 c2"));
+    assert(scalar_decoded.scalar && scalar_decoded.op == Op::AddSS && scalar_decoded.src1 == 1 && scalar_decoded.src2 == 2);
+    const auto scalar_block = translate_basic_block({0xC5, 0xF2, 0x58, 0xC2}, 0xC100);
+    const auto scalar_sse = lower_block_to_legacy_sse(scalar_block.block);
+    assert(scalar_sse.supported && !scalar_sse.code.empty());
+    assert(!contains_vex_or_evex_prefix(scalar_sse.code));
+    const Decoded scalar_load = decode(parse_hex("c5 f2 10 00"));
+    assert(scalar_load.scalar && scalar_load.memory && scalar_load.memory_operand.has_base);
+    const Decoded scalar_store = decode(parse_hex("c5 fa 11 00"));
+    assert(scalar_store.scalar && scalar_store.memory && scalar_store.memory_destination && scalar_store.src2 == 0);
 
     ProcessRuntimeTracker tracker;
     tracker.register_executable_region(0xD000, 0x1000);

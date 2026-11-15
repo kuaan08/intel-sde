@@ -21,7 +21,7 @@ Decoded decode(const std::vector<std::uint8_t>& b) {
         if (b.size() < 4) fail("truncated VEX3 instruction");
         std::uint8_t p0 = b[1], p1 = b[2]; map = p0 & 31U; r = ((p0 >> 7) & 1U) ^ 1U; x = ((p0 >> 6) & 1U) ^ 1U; bx = ((p0 >> 5) & 1U) ^ 1U; w = (p1 >> 7) & 1U; v = (p1 >> 3) & 15U; l = (p1 >> 2) & 1U; pp = p1 & 3U; off = 3;
     } else fail("not a VEX instruction");
-    if (map != 1 || pp != 0 || w != 0 || off >= b.size()) fail("unsupported VEX form");
+    if (map != 1 || w != 0 || off >= b.size()) fail("unsupported VEX form");
     if (b[off] == 0x77) {
         if (l || v != 15 || b.size() != off + 1) fail("invalid VZEROUPPER");
         return {Op::ZeroUpper, 0, 0, 0, 256};
@@ -34,23 +34,35 @@ Decoded decode(const std::vector<std::uint8_t>& b) {
     const unsigned src1 = (~v) & 15U;
     const unsigned bits = l ? 256 : 128;
     Op op;
+    bool scalar = false;
     switch (b[off]) {
-    case 0x58: op = Op::AddPS; break; case 0x5C: op = Op::SubPS; break; case 0x59: op = Op::MulPS; break; case 0x5E: op = Op::DivPS; break;
-    case 0x57: op = Op::XorPS; break; case 0x54: op = Op::AndPS; break; case 0x56: op = Op::OrPS; break;
-    case 0x10: case 0x28: case 0x11: case 0x29: if (v != 15) fail("invalid VMOV reserved vvvv"); op = Op::Move; break;
+    case 0x58: if (pp == 0) op = Op::AddPS; else if (pp == 2) { op = Op::AddSS; scalar = true; } else fail("unsupported VADD prefix"); break;
+    case 0x5C: if (pp == 0) op = Op::SubPS; else if (pp == 2) { op = Op::SubSS; scalar = true; } else fail("unsupported VSUB prefix"); break;
+    case 0x59: if (pp == 0) op = Op::MulPS; else if (pp == 2) { op = Op::MulSS; scalar = true; } else fail("unsupported VMUL prefix"); break;
+    case 0x5E: if (pp == 0) op = Op::DivPS; else if (pp == 2) { op = Op::DivSS; scalar = true; } else fail("unsupported VDIV prefix"); break;
+    case 0x57: if (pp != 0) fail("unsupported VXOR prefix"); op = Op::XorPS; break;
+    case 0x54: if (pp != 0) fail("unsupported VAND prefix"); op = Op::AndPS; break;
+    case 0x56: if (pp != 0) fail("unsupported VOR prefix"); op = Op::OrPS; break;
+    case 0x10: if (pp == 0 && v == 15) op = Op::Move; else if (pp == 2) { op = Op::MoveSS; scalar = true; } else fail("unsupported VMOV load prefix"); break;
+    case 0x28: if (pp != 0 || v != 15) fail("invalid VMOVAPS reserved fields"); op = Op::Move; break;
+    case 0x11: if (pp == 0 && v == 15) op = Op::Move; else if (pp == 2) { op = Op::MoveSS; scalar = true; } else fail("unsupported VMOV store prefix"); break;
+    case 0x29: if (pp != 0 || v != 15) fail("invalid VMOVAPS reserved fields"); op = Op::Move; break;
     default: fail("unsupported AVX1 opcode");
     }
     if (mod == 3) {
         if (x != 0 || b.size() != off + 2) fail("invalid register-only VEX encoding");
+        if (op == Op::MoveSS && b[off] == 0x11) fail("VMOVSS register destination encoding is invalid");
         if (op == Op::Move && (b[off] == 0x11 || b[off] == 0x29)) return {op, rm, 0, reg, bits};
         if (op == Op::Move) return {op, reg, 0, rm, bits};
-        return {op, reg, src1, rm, bits};
+        if (op == Op::MoveSS) return {op, reg, src1, rm, bits, false, false, {}, 0, true};
+        return {op, reg, src1, rm, bits, false, false, {}, 0, scalar};
     }
     const MemoryOperand memory = decode_memory_operand(b.data() + off + 1, b.size() - off - 1,
                                                         static_cast<std::uint8_t>(bx), static_cast<std::uint8_t>(x));
     if (b.size() != off + 1 + memory.encoded_length) fail("trailing bytes after VEX memory instruction");
     if (op == Op::Move && (b[off] == 0x11 || b[off] == 0x29)) return {op, 0, 0, reg, bits, true, true, memory};
-    return {op, reg, src1, 0, bits, true, false, memory};
+    if (op == Op::MoveSS && b[off] == 0x11) return {op, 0, 0, reg, bits, true, true, memory, 0, true};
+    return {op, reg, src1, 0, bits, true, false, memory, 0, scalar};
 }
 
 std::vector<std::uint8_t> parse_hex(const std::string& text) {
@@ -62,7 +74,7 @@ std::vector<std::uint8_t> parse_hex(const std::string& text) {
 
 namespace {
 IROpcode to_ir_opcode(Op op) {
-    switch (op) { case Op::AddPS: return IROpcode::AddPS; case Op::SubPS: return IROpcode::SubPS; case Op::MulPS: return IROpcode::MulPS; case Op::DivPS: return IROpcode::DivPS; case Op::XorPS: return IROpcode::XorPS; case Op::AndPS: return IROpcode::AndPS; case Op::OrPS: return IROpcode::OrPS; case Op::Move: return IROpcode::Move; case Op::ZeroUpper: return IROpcode::ZeroUpper; default: return IROpcode::Unsupported; }
+    switch (op) { case Op::AddPS: return IROpcode::AddPS; case Op::SubPS: return IROpcode::SubPS; case Op::MulPS: return IROpcode::MulPS; case Op::DivPS: return IROpcode::DivPS; case Op::XorPS: return IROpcode::XorPS; case Op::AndPS: return IROpcode::AndPS; case Op::OrPS: return IROpcode::OrPS; case Op::AddSS: return IROpcode::AddSS; case Op::SubSS: return IROpcode::SubSS; case Op::MulSS: return IROpcode::MulSS; case Op::DivSS: return IROpcode::DivSS; case Op::MoveSS: return IROpcode::MoveSS; case Op::Move: return IROpcode::Move; case Op::ZeroUpper: return IROpcode::ZeroUpper; default: return IROpcode::Unsupported; }
 }
 }
 
@@ -73,11 +85,12 @@ IRInstruction make_ir_instruction(const Decoded& decoded, std::uint64_t guest_ad
     instruction.src1 = static_cast<std::uint8_t>(decoded.src1);
     instruction.src2 = static_cast<std::uint8_t>(decoded.src2);
     instruction.vector_bits = static_cast<std::uint16_t>(decoded.bits);
+    instruction.scalar = decoded.scalar;
     instruction.guest_address = guest_address;
     instruction.length = length;
     instruction.has_memory_operand = decoded.memory;
     instruction.memory = decoded.memory_operand;
-    instruction.memory_width_bytes = static_cast<std::uint16_t>(decoded.bits / 8);
+    instruction.memory_width_bytes = static_cast<std::uint16_t>(decoded.scalar ? 4 : decoded.bits / 8);
     instruction.exception_behavior = decoded.memory ? ExceptionBehavior::MayFaultOnMemory
                                                     : ExceptionBehavior::MayRaiseFloatingPoint;
     if (decoded.op == Op::ZeroUpper) {
@@ -87,13 +100,13 @@ IRInstruction make_ir_instruction(const Decoded& decoded, std::uint64_t guest_ad
         instruction.access.ymm_read_mask = static_cast<std::uint16_t>(1U << decoded.src2);
     } else {
         instruction.memory_access = decoded.memory ? MemoryAccess::Read : MemoryAccess::None;
-        instruction.access.ymm_read_mask = decoded.op == Op::Move
+        instruction.access.ymm_read_mask = decoded.op == Op::Move || decoded.op == Op::MoveSS
             ? 0 : static_cast<std::uint16_t>(1U << decoded.src1);
-        if (decoded.op != Op::Move)
+        if (decoded.op != Op::Move && decoded.op != Op::MoveSS)
             instruction.access.ymm_read_mask |= static_cast<std::uint16_t>(1U << decoded.src2);
         instruction.access.ymm_write_mask = static_cast<std::uint16_t>(1U << decoded.dst);
     }
-    if (!decoded.memory && decoded.op == Op::Move) {
+    if (!decoded.memory && (decoded.op == Op::Move || decoded.op == Op::MoveSS)) {
         instruction.access.ymm_read_mask = static_cast<std::uint16_t>(1U << decoded.src2);
         instruction.access.ymm_write_mask = static_cast<std::uint16_t>(1U << decoded.dst);
     }

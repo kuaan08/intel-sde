@@ -60,7 +60,7 @@ static std::uint8_t* memory_ptr(MachineState& state, std::uint64_t address, unsi
 
 static void execute_impl(const Decoded& d, VectorState& vectors, MachineState* machine) {
     if (d.op == Op::ZeroUpper) { for (auto& r : vectors.ymm) std::memset(r.data() + 16, 0, 16); return; }
-    const unsigned bytes = d.bits / 8;
+    const unsigned bytes = d.scalar ? 4 : d.bits / 8;
     const std::uint8_t* source2 = nullptr;
     std::uint8_t* destination = nullptr;
     if (d.memory) {
@@ -74,6 +74,37 @@ static void execute_impl(const Decoded& d, VectorState& vectors, MachineState* m
         source2 = memory;
     } else {
         source2 = vectors.ymm[d.src2].data();
+    }
+    if (d.op == Op::MoveSS) {
+        if (d.memory_destination) {
+            if (!machine) fail("scalar memory store requires MachineState");
+            std::memcpy(memory_ptr(*machine, effective_address(d, *machine), 4), vectors.ymm[d.src2].data(), 4);
+            return;
+        }
+        std::array<std::uint8_t, 16> upper{};
+        std::memcpy(upper.data(), vectors.ymm[d.src1].data(), upper.size());
+        std::memcpy(vectors.ymm[d.dst].data(), upper.data(), upper.size());
+        std::memcpy(vectors.ymm[d.dst].data(), source2, 4);
+        std::memset(vectors.ymm[d.dst].data() + 16, 0, 16);
+        return;
+    }
+    if (d.scalar) {
+        std::array<std::uint8_t, 16> first{};
+        std::memcpy(first.data(), vectors.ymm[d.src1].data(), first.size());
+        const float left_value = f32(vectors.ymm[d.src1].data());
+        const float right_value = f32(source2);
+        float value = 0.0f;
+        switch (d.op) {
+        case Op::AddSS: value = left_value + right_value; break;
+        case Op::SubSS: value = left_value - right_value; break;
+        case Op::MulSS: value = left_value * right_value; break;
+        case Op::DivSS: value = left_value / right_value; break;
+        default: fail("internal unsupported scalar operation");
+        }
+        std::memcpy(vectors.ymm[d.dst].data(), first.data(), first.size());
+        putf32(vectors.ymm[d.dst].data(), value);
+        std::memset(vectors.ymm[d.dst].data() + 16, 0, 16);
+        return;
     }
     if (d.op == Op::Move) {
         destination = vectors.ymm[d.dst].data();
@@ -131,7 +162,19 @@ static void benchmark(unsigned iterations) {
 
 static void self_test() {
     VectorState s; seed(s); execute(decode(parse_hex("c5 f0 58 c2")), s); if (f32(s.ymm[0].data()) != 5.0f) fail("VADDPS result mismatch");
+    VectorState scalar; seed(scalar);
+    execute(decode(parse_hex("c5 f2 58 c2")), scalar);
+    if (f32(scalar.ymm[0].data()) != 5.0f || f32(scalar.ymm[0].data() + 4) != 3.0f || scalar.ymm[0][16] != 0)
+        fail("VADDSS result or upper-lane mismatch");
+    execute(decode(parse_hex("c5 f2 10 c2")), scalar);
+    if (f32(scalar.ymm[0].data()) != 3.0f || f32(scalar.ymm[0].data() + 4) != 3.0f || scalar.ymm[0][16] != 0)
+        fail("VMOVSS register result mismatch");
     MachineState memory; seed(memory); execute(decode(parse_hex("c5 f0 58 00")), memory); if (f32(memory.vectors.ymm[0].data()) != 12.0f) fail("memory VADDPS result mismatch");
+    execute(decode(parse_hex("c5 f2 58 00")), memory);
+    if (f32(memory.vectors.ymm[0].data()) != 12.0f || f32(memory.vectors.ymm[0].data() + 4) != 3.0f)
+        fail("memory VADDSS result mismatch");
+    execute(decode(parse_hex("c5 fa 11 00")), memory);
+    if (f32(memory.memory.data() + 256) != 12.0f) fail("VMOVSS memory store mismatch");
     execute(decode(parse_hex("c5 f8 11 01")), memory); if (f32(memory.memory.data() + 512) != 12.0f) fail("memory VMOV store mismatch");
     execute(decode(parse_hex("c5 f8 77")), s); for (auto& r : s.ymm) for (unsigned i = 16; i < 32; ++i) if (r[i] != 0) fail("VZEROUPPER mismatch");
     const IRInstruction register_ir = make_ir_instruction(decode(parse_hex("c5 f0 58 c2")), 0x1000, 4);
@@ -144,6 +187,10 @@ static void self_test() {
     if (memory_ir.memory_access != MemoryAccess::Read || memory_ir.memory_width_bytes != 16 ||
         memory_ir.exception_behavior != ExceptionBehavior::MayFaultOnMemory)
         fail("IR memory metadata mismatch");
+    const IRInstruction scalar_ir = make_ir_instruction(decode(parse_hex("c5 f2 58 00")), 0x1000, 4);
+    if (!scalar_ir.scalar || scalar_ir.memory_width_bytes != 4 || scalar_ir.vector_bits != 128 ||
+        scalar_ir.memory_access != MemoryAccess::Read)
+        fail("IR scalar metadata mismatch");
 
     const std::vector<std::vector<std::uint8_t>> invalid = {
         {}, {0xC5}, {0xC4, 0xE1}, {0x90, 0x90, 0x90},

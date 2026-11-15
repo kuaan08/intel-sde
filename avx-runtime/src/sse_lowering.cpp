@@ -40,6 +40,16 @@ public:
         byte(0x0F); byte(value); byte(0xC1); // xmm0 := xmm0 op xmm1
         return true;
     }
+    bool scalar_op(IROpcode opcode) {
+        std::uint8_t value = 0;
+        switch (opcode) {
+        case IROpcode::AddSS: value = 0x58; break; case IROpcode::SubSS: value = 0x5C; break;
+        case IROpcode::MulSS: value = 0x59; break; case IROpcode::DivSS: value = 0x5E; break;
+        case IROpcode::MoveSS: value = 0x10; break; default: return false;
+        }
+        byte(0xF3); byte(0x0F); byte(value); byte(0xC1); // xmm0 := xmm0 op xmm1
+        return true;
+    }
 };
 
 unsigned offset(unsigned reg, unsigned half) { return reg * 32U + half * 16U; }
@@ -57,6 +67,17 @@ SseLoweringResult lower_block_to_legacy_sse(const IRBlock& block) {
         if (instruction.vector_bits != 128 && instruction.vector_bits != 256) {
             result.diagnostic = "only 128-bit and 256-bit vector widths are supported";
             return result;
+        }
+        if (instruction.scalar) {
+            const unsigned source = instruction.opcode == IROpcode::MoveSS ? instruction.src1 : instruction.src1;
+            emitter.load(0, offset(source, 0));
+            emitter.load(1, offset(instruction.opcode == IROpcode::MoveSS ? instruction.src2 : instruction.src2, 0));
+            if (!emitter.scalar_op(instruction.opcode)) {
+                result.diagnostic = "scalar operation has no legacy SSE lowering";
+                return result;
+            }
+            emitter.store(offset(instruction.dst, 0), 0);
+            continue;
         }
         const unsigned halves = instruction.vector_bits == 256 ? 2 : 1;
         if (instruction.opcode == IROpcode::ZeroUpper) {

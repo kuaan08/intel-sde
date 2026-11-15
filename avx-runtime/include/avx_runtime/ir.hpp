@@ -6,7 +6,11 @@
 
 namespace avxlab {
 
-enum class IROpcode { AddPS, SubPS, MulPS, DivPS, XorPS, AndPS, OrPS, Move, ZeroUpper, Unsupported };
+enum class IROpcode {
+    AddPS, SubPS, MulPS, DivPS, XorPS, AndPS, OrPS,
+    AddSS, SubSS, MulSS, DivSS, MoveSS,
+    Move, ZeroUpper, Unsupported
+};
 
 enum class BlockTerminator { Fallthrough, DirectBranch, IndirectBranch, Call, Return, Trap };
 
@@ -29,6 +33,7 @@ struct IRInstruction {
     std::uint8_t src1 = 0;
     std::uint8_t src2 = 0;
     std::uint16_t vector_bits = 128;
+    bool scalar = false;
     std::uint64_t guest_address = 0;
     std::uint8_t length = 0;
     bool has_memory_operand = false;

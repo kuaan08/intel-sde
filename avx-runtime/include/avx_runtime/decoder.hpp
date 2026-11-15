@@ -7,7 +7,11 @@
 
 namespace avxlab {
 
-enum class Op { AddPS, SubPS, MulPS, DivPS, XorPS, AndPS, OrPS, Move, ZeroUpper };
+enum class Op {
+    AddPS, SubPS, MulPS, DivPS, XorPS, AndPS, OrPS,
+    AddSS, SubSS, MulSS, DivSS, MoveSS,
+    Move, ZeroUpper
+};
 
 struct Decoded {
     Op op = Op::AddPS;
@@ -19,6 +23,7 @@ struct Decoded {
     bool memory_destination = false;
     MemoryOperand memory_operand{};
     std::uint64_t guest_address = 0;
+    bool scalar = false;
 };
 
 Decoded decode(const std::vector<std::uint8_t>& bytes);

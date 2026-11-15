@@ -48,6 +48,7 @@ This roadmap is the implementation contract for the independent Windows x64 back
 **Status: In progress**
 
 - [x] Execute the initial packed-single AVX1 subset without AVX host instructions.
+- [x] Add the initial VEX scalar-single slice: `VMOVSS`, `VADDSS`, `VSUBSS`, `VMULSS`, and `VDIVSS`; broader scalar, conversion, and exception coverage remains open.
 - [x] Validate register and synthetic-memory forms against scalar/SSE references.
 - [x] Add the Windows VEX.128 guest fixture with exact VEX bytes in executable memory.
 - [ ] Add remaining AVX1 packed-single move/arithmetic variants needed by real compiler output.
