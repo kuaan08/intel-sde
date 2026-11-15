@@ -175,7 +175,7 @@ static void self_test() {
 int main(int argc, char** argv) {
     try {
         if (argc == 2 && std::string(argv[1]) == "--self-test") { avxlab::self_test(); return 0; }
-        if (argc == 3 && std::string(argv[1]) == "--decode") { avxlab::Decoded d = avxlab::decode(avxlab::parse_hex(argv[2])); std::cout << "decoded bits=" << d.bits << " dst=ymm" << d.dst << " src1=ymm" << d.src1 << " src2=ymm" << d.src2 << " memory=" << (d.memory ? "yes" : "no") << "\n"; return 0; }
+        if (argc == 3 && std::string(argv[1]) == "--decode") { avxlab::Decoded d = avxlab::decode(avxlab::parse_hex(argv[2])); std::cout << "decoded bits=" << d.bits << " dst=ymm" << d.dst << " src1=ymm" << d.src1; if (d.memory) std::cout << " src2=" << avxlab::format_memory_operand(d.memory_operand); else std::cout << " src2=ymm" << d.src2; std::cout << " memory=" << (d.memory ? "yes" : "no") << "\n"; return 0; }
         if (argc == 3 && std::string(argv[1]) == "--run-file") { avxlab::run_file(argv[2]); return 0; }
         std::cerr << "usage: avx_runtime --self-test | --decode \"c5 f0 58 c2\" | --run-file program.txt\n"; return 64;
     } catch (const std::exception& e) { std::cerr << "FAIL: " << e.what() << '\n'; return 1; }
