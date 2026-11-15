@@ -58,13 +58,25 @@ bool safe_write(void* destination, const void* source, std::size_t bytes) {
 bool emulate_virtual_feature_query(CONTEXT* context) {
     if (!context || context->Rip == 0) return false;
     std::uint8_t opcode[4] = {};
-    if (!safe_read(reinterpret_cast<const void*>(context->Rip), opcode, sizeof(opcode))) return false;
-    unsigned breakpoint_length = 0;
+    std::uintptr_t instruction_address = context->Rip;
+    unsigned trap_bytes_before_rip = 0;
+    if (!safe_read(reinterpret_cast<const void*>(instruction_address), opcode, sizeof(opcode))) return false;
     if (opcode[0] == 0xCC) {
-        breakpoint_length = 1;
+        trap_bytes_before_rip = 1;
+        std::memmove(opcode, opcode + 1, 3);
+    } else {
+        std::uint8_t previous = 0;
+        if (instruction_address == 0 ||
+            !safe_read(reinterpret_cast<const void*>(instruction_address - 1), &previous, 1) ||
+            previous != 0xCC) return false;
+        instruction_address -= 1;
+        trap_bytes_before_rip = 1;
+        if (!safe_read(reinterpret_cast<const void*>(instruction_address), opcode, sizeof(opcode))) return false;
         std::memmove(opcode, opcode + 1, 3);
     }
-    if (opcode[0] == 0x0F && opcode[1] == 0xA2) {
+    // The patcher replaces the first byte (0x0F) with INT3. The bytes visible
+    // after the trap are therefore A2 for CPUID and 01 D0 for XGETBV.
+    if (trap_bytes_before_rip != 0 && opcode[0] == 0xA2) {
         unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
 #if defined(__GNUC__)
         __cpuid_count(static_cast<unsigned int>(context->Rax),
@@ -83,13 +95,13 @@ bool emulate_virtual_feature_query(CONTEXT* context) {
             ebx &= ~(1U << 5); // AVX2 remains hidden until its backend is complete.
         }
         context->Rax = eax; context->Rbx = ebx; context->Rcx = ecx; context->Rdx = edx;
-        context->Rip += breakpoint_length + 2;
+        context->Rip = instruction_address + 2;
         return true;
     }
-    if (opcode[0] == 0x0F && opcode[1] == 0x01 && opcode[2] == 0xD0 && context->Rcx == 0) {
+    if (trap_bytes_before_rip != 0 && opcode[0] == 0x01 && opcode[1] == 0xD0 && context->Rcx == 0) {
         context->Rax = 6; // XMM and YMM state enabled in the virtual guest view.
         context->Rdx = 0;
-        context->Rip += breakpoint_length + 3;
+        context->Rip = instruction_address + 3;
         return true;
     }
     return false;
@@ -333,7 +345,7 @@ PVOID g_handler = nullptr;
 
 } // namespace
 
-extern "C" __declspec(dllexport) const char* SdeAvxShimVersion() { return "SDE AVX Lab Windows shim 0.2; VEX128 register-and-memory subset"; }
+extern "C" __declspec(dllexport) const char* SdeAvxShimVersion() { return "SDE AVX Lab Windows shim 0.3; VEX128 subset with opt-in CPUID/XGETBV virtualization"; }
 
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) { DisableThreadLibraryCalls(instance); g_handler = AddVectoredExceptionHandler(1, sde_avx_vectored_handler); }

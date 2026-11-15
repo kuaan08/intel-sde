@@ -16,6 +16,7 @@ This directory contains the maintained technical documentation for SDE AVX Lab. 
 
 - [Intel SDE feature map](INTEL-SDE-FEATURE-MAP.md) — external behavior reference and project boundaries.
 - [Xenia CPU feature study](XENIA-CPU-FEATURE-STUDY-2026-11-15.md) — static analysis of the Xenia CPU/JIT requirements.
+- [Xenia AVX interceptor test](XENIA-AVX-INTERCEPTOR-TEST-2026-11-15.md) — reproducible Wine/QEMU validation of the opt-in CPUID/XGETBV path.
 - [Legal boundary and optimization plan](LEGAL-BOUNDARY-AND-OPTIMIZATION-PLAN.md) — independent implementation rules and optimization gates.
 - [External Windows SDE 9.58 manifest](EXTERNAL-WINDOWS-SDE-9.58-MANIFEST.txt) — provenance and hashes for the preserved comparison package.
 

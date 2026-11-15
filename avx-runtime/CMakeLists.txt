@@ -56,6 +56,12 @@ if(MSVC)
   target_compile_features(avx1_windows_fixture PRIVATE cxx_std_17)
   target_compile_options(avx1_windows_fixture PRIVATE /W4 /O2)
 
+  add_executable(windows_cpuid_fixture
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_cpuid_fixture.cpp"
+  )
+  target_compile_features(windows_cpuid_fixture PRIVATE cxx_std_17)
+  target_compile_options(windows_cpuid_fixture PRIVATE /W4 /O2)
+
   add_library(avx_winshim SHARED src/windows_avx_shim.cpp)
   target_compile_features(avx_winshim PRIVATE cxx_std_17)
   target_compile_options(avx_winshim PRIVATE /W4 /O2 /arch:SSE2)

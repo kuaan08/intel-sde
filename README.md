@@ -33,6 +33,7 @@ The independent core currently provides:
 - an experimental Windows suspended-process host and injected VEH shim;
 - packed and scalar VEX fixture validation through Wine/QEMU with a Conroe no-AVX CPU model;
 - an opt-in main-image CPUID/XGETBV patch path, still pending native Windows and loader/JIT validation.
+- a versioned CPUID/XGETBV fixture that passes under Wine/QEMU Conroe and a Xenia Canary liveness run that passes beyond the feature-query breakpoint stage; this is not yet a JIT translation or game-compatibility result.
 
 These are implementation foundations, not a promise of arbitrary application compatibility. The complete process DBT path, memory helpers, control-flow execution, loader/JIT integration, SEH/VEH chaining, broad AVX1 coverage, AVX2 coverage, and application testing remain open.
 
@@ -142,6 +143,7 @@ The [documentation index](docs/README.md) is the canonical entry point.
 - [Windows process runtime](docs/WINDOWS-PROCESS-RUNTIME.md)
 - [Intel SDE feature map](docs/INTEL-SDE-FEATURE-MAP.md)
 - [Xenia CPU feature study](docs/XENIA-CPU-FEATURE-STUDY-2026-11-15.md)
+- [Xenia AVX interceptor test](docs/XENIA-AVX-INTERCEPTOR-TEST-2026-11-15.md)
 - [Legal boundary and optimization plan](docs/LEGAL-BOUNDARY-AND-OPTIMIZATION-PLAN.md)
 - [Runtime README](avx-runtime/README.md)
 - [AVX1-to-SSE POC README](avx1-sse-poc/README.md)
