@@ -40,7 +40,7 @@ Intel's release notes show that later SDE versions continued adding instruction 
 
 ## Current project coverage
 
-The repository currently contains an independent AVX1 VEX decoder/interpreter, an AVX1-to-legacy-SSE proof of concept, a Windows launcher, profile storage, diagnostics, external `-mix` integration, and no-AVX CI tests. It does not yet provide process-level DBT, memory operands, a block cache, CPUID/XGETBV interception, attach mode, or an independent dynamic mix/trace engine.
+The repository currently contains an independent AVX1 VEX decoder/interpreter, an initial VEX scalar-single slice, an AVX1-to-legacy-SSE proof of concept, bounded basic-block translation, a generation-aware block-cache prototype, executable-page tracking primitives, per-thread guest-state storage, a Windows launcher, profile storage, diagnostics, external `-mix` integration, and no-AVX CI tests. It still does not provide a complete process-level DBT, dispatcher-backed memory/helper lowering, loader/JIT interception, SEH/VEH chaining, CPUID/XGETBV process interception, attach mode, or an independent dynamic mix/trace engine.
 
 The next implementation should therefore add an internal IR plus a profiler interface before adding more opcode families. Both the interpreter and the SSE lowering backend should report the same decoded instruction identity so that their results can be compared.
 
@@ -50,7 +50,7 @@ The next implementation should therefore add an internal IR plus a profiler inte
 |---|---|---|
 | Launch an application under an emulator policy | Partial | Windows process runtime |
 | CPU profiles and CPUID presentation | Profile UI only | Guest feature policy |
-| AVX/AVX2 instruction emulation | AVX1 subset only | Decoder, IR, interpreter, SSE backend |
+| AVX/AVX2 instruction emulation | AVX1 packed-single plus initial scalar-single subset; no process guarantee | Decoder, IR, interpreter, SSE backend |
 | Dynamic instruction mix | External backend only | Runtime profiler and JSON writer |
 | Instruction/register/memory tracing | Not implemented | Trace sink and block observer |
 | Footprint analysis | Not implemented | Cache-line footprint collector |
