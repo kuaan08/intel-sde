@@ -43,9 +43,18 @@ endif()
 
 if(MSVC)
   enable_language(ASM_MASM)
-  add_executable(avx1_windows_fixture tests/windows_avx1_fixture.cpp tests/windows_avx1_fixture.asm)
+  # Use absolute source paths so Visual Studio does not hand ml64.exe a
+  # malformed relative /Fo path when the fixture is built from a multi-config
+  # generator.  The fixture deliberately contains only AVX1 VEX.128 code.
+  set(WINDOWS_AVX1_FIXTURE_ASM
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_avx1_fixture.asm")
+  set_source_files_properties(${WINDOWS_AVX1_FIXTURE_ASM}
+    PROPERTIES LANGUAGE ASM_MASM)
+  add_executable(avx1_windows_fixture
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_avx1_fixture.cpp"
+    ${WINDOWS_AVX1_FIXTURE_ASM})
   target_compile_features(avx1_windows_fixture PRIVATE cxx_std_17)
-  target_compile_options(avx1_windows_fixture PRIVATE /W4 /O2 /arch:SSE2)
+  target_compile_options(avx1_windows_fixture PRIVATE /W4 /O2)
 
   add_library(avx_winshim SHARED src/windows_avx_shim.cpp)
   target_compile_features(avx_winshim PRIVATE cxx_std_17)
