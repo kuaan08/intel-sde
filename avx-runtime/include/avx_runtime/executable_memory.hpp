@@ -20,6 +20,8 @@ public:
     void unregister_region(std::uint64_t base);
     void invalidate_write(std::uint64_t address, std::size_t size);
     const ExecutableRegion* find(std::uint64_t address) const;
+    std::uint64_t generation_at(std::uint64_t address) const;
+    std::vector<ExecutableRegion> snapshot() const { return regions_; }
     const std::vector<ExecutableRegion>& regions() const { return regions_; }
 
 private:

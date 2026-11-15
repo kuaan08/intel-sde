@@ -23,4 +23,30 @@ std::string feature_report(const GuestFeatures& features) {
     return out.str();
 }
 
+VirtualCpuidResult virtual_cpuid(const Coverage& coverage, std::uint32_t leaf, std::uint32_t subleaf) {
+    const GuestFeatures features = derive_guest_features(coverage);
+    VirtualCpuidResult result;
+    if (leaf == 0) { result.eax = 7; return result; }
+    if (leaf == 1 && subleaf == 0) {
+        result.ecx = (1U << 20); // SSE4.2
+        if (features.xsave) result.ecx |= 1U << 26;
+        if (features.osxsave) result.ecx |= 1U << 27;
+        if (features.avx) result.ecx |= 1U << 28;
+        return result;
+    }
+    if (leaf == 7 && subleaf == 0) {
+        if (features.avx2) result.ebx |= 1U << 5;
+        return result;
+    }
+    return result;
+}
+
+bool virtual_xgetbv(const Coverage& coverage, std::uint32_t index, std::uint64_t* value) {
+    if (!value || index != 0) return false;
+    const GuestFeatures features = derive_guest_features(coverage);
+    if (!features.osxsave) return false;
+    *value = features.avx ? 0x6ULL : 0x1ULL;
+    return true;
+}
+
 } // namespace avxlab

@@ -3,10 +3,15 @@ project(SDE_AVX_Lab_Runtime LANGUAGES CXX)
 
 set(RUNTIME_CORE_SOURCES
   src/memory_address.cpp
+  src/decoder.cpp
+  src/sse_lowering.cpp
+  src/thread_state.cpp
+  src/process_runtime.cpp
   src/block_cache.cpp
   src/block_builder.cpp
   src/executable_memory.cpp
   src/feature_policy.cpp
+  src/translator.cpp
   src/windows_process_host.cpp
 )
 

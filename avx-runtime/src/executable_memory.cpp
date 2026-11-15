@@ -33,4 +33,9 @@ const ExecutableRegion* ExecutableMemoryMap::find(std::uint64_t address) const {
     return nullptr;
 }
 
+std::uint64_t ExecutableMemoryMap::generation_at(std::uint64_t address) const {
+    const ExecutableRegion* region = find(address);
+    return region ? region->generation : 0;
+}
+
 } // namespace avxlab

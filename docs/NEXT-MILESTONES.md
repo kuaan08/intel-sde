@@ -13,7 +13,7 @@ This roadmap is the implementation contract for the independent Windows x64 back
 
 **Complete:** VEX decoder prototype, AVX1 packed-single interpreter subset, VEX.128/VEX.256 logical state, ModRM/SIB and RIP-relative address decoding, shared IR data types, cache-generation prototype, feature-coverage policy, Windows build, deterministic tests, CI packaging, and a small VEX.128 VEH fixture.
 
-**In progress:** process-level execution. The current Windows shim is an experimental fault path for a narrow VEX.128 register subset. It is not yet a general DBT engine and does not enable arbitrary application compatibility.
+**In progress:** process-level execution. The current Windows shim is an experimental fault path for a narrow VEX.128 register subset. The core now also has reusable block translation, legacy-SSE lowering, executable-page tracking, thread-state and virtual feature-policy primitives, but it is not yet a general DBT engine and does not enable arbitrary application compatibility.
 
 **Not enabled:** process-level AVX advertising, AVX2 advertising, arbitrary-game support, or claims of complete Windows application compatibility.
 
@@ -38,8 +38,8 @@ This roadmap is the implementation contract for the independent Windows x64 back
 - [x] Decode ModRM, SIB, displacement, and RIP-relative addressing.
 - [x] Maintain 16 logical YMM registers, upper-lane clearing, GPRs, MXCSR-related state, and guest memory for deterministic tests.
 - [x] Represent decoded linear instructions in shared IR types.
-- [ ] Add explicit IR metadata for read/write sets, flags, memory width, alignment requirements, and exception behavior.
-- [ ] Add decoder negative tests for truncated VEX prefixes, invalid `vvvv`, illegal reserved bits, unsupported opcodes, and address-size combinations.
+- [x] Add explicit IR metadata for read/write sets, flags, memory width, alignment requirements, and exception behavior.
+- [x] Add decoder negative tests for truncated VEX prefixes, invalid `vvvv`, illegal reserved bits, unsupported opcodes, and malformed address forms. Address-size coverage remains limited to the supported 64-bit decoder contract.
 
 **Acceptance gate:** every supported instruction has decoder, IR, interpreter, memory, aliasing, upper-lane, and invalid-encoding tests with deterministic diagnostics.
 
@@ -61,10 +61,10 @@ This roadmap is the implementation contract for the independent Windows x64 back
 
 **Status: In progress**
 
-- [ ] Decode complete straight-line blocks from a guest entry address.
-- [ ] Stop blocks at direct/indirect branches, calls, returns, system instructions, page boundaries, unsupported instructions, and maximum length.
-- [ ] Preserve guest address and source length for every translated instruction.
-- [ ] Lower the shared IR to legacy SSE4.2 or scalar helper sequences.
+- [x] Decode bounded straight-line blocks from a guest entry address.
+- [x] Stop blocks at direct/indirect branches, calls, returns, system instructions, unsupported instructions, and maximum length. Page-boundary splitting and complete indirect-target recovery remain pending.
+- [x] Preserve guest address and source length for every translated instruction.
+- [x] Lower the supported register-register IR subset to legacy SSE4.2 bytes; memory/helper lowering remains pending.
 - [ ] Define a calling convention for helper calls and preserve nonvolatile host registers.
 - [ ] Implement translated-block exits for fall-through, direct branch, indirect branch, call, return, and unsupported-instruction fallback.
 - [ ] Add block-level equivalence tests against the interpreter.
@@ -77,9 +77,9 @@ This roadmap is the implementation contract for the independent Windows x64 back
 
 - [x] Keep a generation-aware translated-block cache prototype.
 - [x] Track executable regions and page write generations in the core model.
-- [ ] Use a cache key containing process/module identity, guest address, source length/bytes, feature profile, and page generation.
-- [ ] Detect executable-page changes from `VirtualProtect`, `WriteProcessMemory`, loader mappings, and JIT writes.
-- [ ] Invalidate every block overlapping a modified byte range.
+- [x] Use a cache key containing process/module identity, guest address, source bytes, feature profile, and page generation.
+- [ ] Detect executable-page changes from `VirtualProtect`, `WriteProcessMemory`, loader mappings, and JIT writes. The tracker currently provides `VirtualQuery` discovery and explicit write notification; API hooks are pending.
+- [x] Invalidate every block overlapping a modified byte range.
 - [ ] Flush the host instruction cache after publishing translated code.
 - [ ] Make cache publication and invalidation safe for concurrent threads.
 - [ ] Add self-modifying-code and JIT regression programs.
@@ -92,13 +92,13 @@ This roadmap is the implementation contract for the independent Windows x64 back
 
 - [x] Start a Windows target suspended and inject the experimental shim.
 - [x] Route a narrow `EXCEPTION_ILLEGAL_INSTRUCTION` case through a VEH handler.
-- [ ] Create per-thread guest state and capture/restore XMM/YMM-compatible state at every translated entry/exit.
+- [x] Create a synchronized per-thread guest state model; capture/restore at translated process entries is pending.
 - [ ] Register existing threads and observe loader-created threads.
 - [ ] Handle thread start, exit, TLS, APC, fiber, and suspend/resume interactions.
-- [ ] Discover executable modules and executable pages with `VirtualQuery`.
+- [x] Discover committed executable regions with `VirtualQuery`; module identity and loader callbacks remain pending.
 - [ ] Handle loader notifications and dynamically loaded modules.
 - [ ] Handle JIT-created executable pages and code invalidation.
-- [ ] Add controlled SEH/VEH chaining, crash reports, unsupported-opcode reports, and reproducible minidump metadata.
+- [x] Add structured unsupported-opcode diagnostics in the core; controlled SEH/VEH chaining and minidump metadata remain pending.
 - [ ] Define safe behavior for syscalls, callbacks, indirect branches, and native exception unwinding.
 
 **Acceptance gate:** a multi-threaded Windows fixture with a dynamically generated code page, an intentional supported AVX instruction, an intentional unsupported instruction, and a handled exception completes with correct logs and no corruption of the host process.
@@ -108,6 +108,7 @@ This roadmap is the implementation contract for the independent Windows x64 back
 **Status: In progress**
 
 - [x] Maintain a coverage-gated policy object in the core.
+- [x] Provide deterministic virtual CPUID/XGETBV responses from the coverage policy; process interception is still pending and AVX remains hidden by default.
 - [ ] Intercept guest `CPUID` without changing the host’s physical feature view.
 - [ ] Intercept guest `XGETBV` consistently with the advertised OSXSAVE/XCR0 state.
 - [ ] Keep AVX hidden until process-level AVX execution, state handling, and fault recovery pass their gates.

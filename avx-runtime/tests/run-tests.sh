@@ -10,7 +10,7 @@ mkdir -p "$BUILD"
 "$CXX" -std=c++17 -O2 -Wall -Wextra -Wpedantic \
   -march=x86-64 -msse4.2 -mno-avx -mno-avx2 -mno-fma -mno-avx512f \
   -fno-tree-vectorize -fno-lto -I"$ROOT/include" \
-  "$ROOT/src/avx_runtime.cpp" "$ROOT/src/memory_address.cpp" "$ROOT/src/block_cache.cpp" "$ROOT/src/block_builder.cpp" "$ROOT/src/executable_memory.cpp" "$ROOT/src/feature_policy.cpp" "$ROOT/src/windows_process_host.cpp" \
+  "$ROOT/src/avx_runtime.cpp" "$ROOT/src/memory_address.cpp" "$ROOT/src/decoder.cpp" "$ROOT/src/sse_lowering.cpp" "$ROOT/src/translator.cpp" "$ROOT/src/thread_state.cpp" "$ROOT/src/process_runtime.cpp" "$ROOT/src/block_cache.cpp" "$ROOT/src/block_builder.cpp" "$ROOT/src/executable_memory.cpp" "$ROOT/src/feature_policy.cpp" "$ROOT/src/windows_process_host.cpp" \
   -o "$BUILD/avx_runtime"
 "$QEMU" -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --self-test
 benchmark_output="$($QEMU -L "$QEMU_LD_PREFIX" "$BUILD/avx_runtime" --benchmark 10000)"
