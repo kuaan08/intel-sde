@@ -222,6 +222,7 @@ THIRD-PARTY-NOTICES.md       Third-party package and license boundaries
 - [Next engineering milestones](docs/NEXT-MILESTONES.md)
 - [Windows process runtime](docs/WINDOWS-PROCESS-RUNTIME.md)
 - [Intel SDE public feature map](docs/INTEL-SDE-FEATURE-MAP.md)
+- [Xenia CPU feature study](docs/XENIA-CPU-FEATURE-STUDY-2026-11-15.md)
 - [Build guide](docs/BUILDING.md)
 - [Runtime documentation](avx-runtime/README.md)
 - [Launcher documentation](sde-avx-lab-app/README.md)
