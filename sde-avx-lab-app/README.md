@@ -17,7 +17,7 @@ The launcher is an original Windows application for the SDE AVX Lab independent 
 - independent SDE AVX Lab Runtime as the default backend;
 - Intel SDE 9.58 explicitly labelled as an external comparison backend.
 
-The independent backend currently runs the own runtime self-test. It does not yet translate an arbitrary game process. The interface keeps this limitation explicit instead of claiming unsupported compatibility.
+The independent backend is a self-test only and never launches the selected game. To launch Xenia or another application, select **Intel SDE 9.58 (inicia jogos)** in the backend list. The interface keeps this limitation explicit instead of claiming unsupported compatibility.
 
 ## Build on Windows
 
@@ -34,6 +34,12 @@ Build.bat
 Start.bat
 ```
 
+When launching from `cmd.exe`, quote the executable name because it contains spaces:
+
+```bat
+start "SDE AVX Lab" "SDE AVX Lab.exe"
+```
+
 Build the independent runtime first:
 
 ```bat
@@ -48,7 +54,7 @@ The launcher automatically searches for `avx_runtime.exe` in `avx-runtime\build-
 1. Keep the official package at `..\windows-9.58` in this repository checkout or select `sde.exe` manually.
 2. Start the launcher.
 3. Select the target executable, such as `xenia_canary.exe`.
-4. Select the external comparison backend.
+4. Select **Intel SDE 9.58 (inicia jogos)**, not the self-test backend.
 5. Start with the `-snb` profile.
 6. Keep `-emu-xinuse 0` disabled initially.
 7. Enable `-mix` only when instruction telemetry is required.

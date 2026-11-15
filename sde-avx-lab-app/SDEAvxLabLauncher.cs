@@ -27,7 +27,7 @@ namespace SdeAvxLab
         public string WorkingDirectory = "";
         public string Arguments = "";
         public string Profile = "-snb";
-        public string Backend = "SDE AVX Lab Runtime (próprio, experimental)";
+        public string Backend = "SDE AVX Lab Runtime (self-test; não inicia jogos)";
         public bool Mix;
         public bool XInUse;
 
@@ -90,7 +90,7 @@ namespace SdeAvxLab
         private TextBox sdePath, targetPath, workPath, targetArgs;
         private ComboBox backendBox, profileBox;
         private CheckBox mixBox, xinuseBox;
-        private Label profileInfo, status;
+        private Label backendInfo, profileInfo, status;
         private RichTextBox eventLog;
         private string appData;
         private string profileDir;
@@ -157,8 +157,8 @@ namespace SdeAvxLab
 
             Panel engine = Card(24, 98, 892, 112); Controls.Add(engine); LabelOn(engine, "1. Backend de execução", 16, 12, 400, 24, true);
             backendBox = new ComboBox(); backendBox.DropDownStyle = ComboBoxStyle.DropDownList; backendBox.Location = new Point(17, 46); backendBox.Size = new Size(390, 30);
-            backendBox.Items.Add("SDE AVX Lab Runtime (próprio, experimental)"); backendBox.Items.Add("Intel SDE 9.58 (externo, comparação)"); backendBox.SelectedIndex = 0; backendBox.BackColor = FieldColor; backendBox.ForeColor = Color.White; engine.Controls.Add(backendBox);
-            LabelOn(engine, "O runtime próprio é o backend padrão. Nesta fase ele emula instruções AVX1 controladas; ainda não intercepta um jogo inteiro.", 430, 48, 440, 48, false);
+            backendBox.Items.Add("SDE AVX Lab Runtime (self-test; não inicia jogos)"); backendBox.Items.Add("Intel SDE 9.58 (inicia jogos)"); backendBox.SelectedIndex = 0; backendBox.BackColor = FieldColor; backendBox.ForeColor = Color.White; backendBox.SelectedIndexChanged += BackendChanged; engine.Controls.Add(backendBox);
+            backendInfo = LabelOn(engine, "O runtime próprio executa somente o self-test AVX1. Para iniciar o Xenia, selecione Intel SDE 9.58.", 430, 48, 440, 48, false);
 
             Panel files = Card(24, 222, 892, 178); Controls.Add(files); LabelOn(files, "2. Arquivos e processo", 16, 12, 400, 24, true);
             LabelOn(files, "SDE / executável do backend:", 17, 45, 210, 24, false); sdePath = TextOn(files, 220, 42, 560, 28); ButtonOn(files, "Procurar", 790, 41, 84, 30, BrowseSde, false);
@@ -183,6 +183,7 @@ namespace SdeAvxLab
 
             Panel logs = Card(24, 660, 892, 82); Controls.Add(logs); LabelOn(logs, "Eventos", 16, 8, 100, 20, true);
             eventLog = new RichTextBox(); eventLog.Location = new Point(110, 8); eventLog.Size = new Size(764, 62); eventLog.BackColor = Color.FromArgb(9, 12, 17); eventLog.ForeColor = Color.FromArgb(180, 198, 218); eventLog.ReadOnly = true; eventLog.BorderStyle = BorderStyle.FixedSingle; logs.Controls.Add(eventLog);
+            BackendChanged(null, EventArgs.Empty);
         }
 
         private void AutoDetectPaths()
@@ -207,6 +208,17 @@ namespace SdeAvxLab
         }
         private void BrowseWork(object sender, EventArgs e) { using (FolderBrowserDialog d = new FolderBrowserDialog()) if (d.ShowDialog(this) == DialogResult.OK) workPath.Text = d.SelectedPath; }
         private void ProfileChanged(object sender, EventArgs e) { CpuProfile p = profileBox.SelectedItem as CpuProfile; if (p != null) profileInfo.Text = p.Description; }
+        private void BackendChanged(object sender, EventArgs e)
+        {
+            bool external = backendBox != null && backendBox.SelectedIndex == 1;
+            if (backendInfo != null) backendInfo.Text = external ? "O Intel SDE externo inicia o aplicativo selecionado com o perfil de CPU escolhido." : "O runtime próprio executa somente o self-test AVX1. Para iniciar o Xenia, selecione Intel SDE 9.58.";
+            if (sdePath != null) sdePath.Enabled = external;
+            if (targetPath != null) targetPath.Enabled = external;
+            if (workPath != null) workPath.Enabled = external;
+            if (targetArgs != null) targetArgs.Enabled = external;
+            if (mixBox != null) mixBox.Enabled = external;
+            if (xinuseBox != null) xinuseBox.Enabled = external;
+        }
 
         private bool ValidateCommon()
         {
@@ -246,7 +258,7 @@ namespace SdeAvxLab
             };
             string runtimePath = ""; foreach (string p in candidates) if (File.Exists(p)) { runtimePath = Path.GetFullPath(p); break; }
             if (runtimePath == "") { WriteLog("Runtime próprio selecionado, mas avx_runtime.exe não está compilado."); MessageBox.Show(this, "O runtime próprio ainda precisa ser compilado no Windows. Execute avx-runtime\\Build-Windows.bat e tente novamente.", "Runtime experimental", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-            try { Process proc = Process.Start(new ProcessStartInfo { FileName = runtimePath, Arguments = "--self-test", WorkingDirectory = Path.GetDirectoryName(runtimePath), UseShellExecute = false, CreateNoWindow = false }); if (proc == null) throw new InvalidOperationException("Process.Start returned no process"); WriteLog("Runtime próprio iniciou o self-test. PID=" + proc.Id); status.Text = "Runtime em execução"; } catch (Exception ex) { WriteLog("Falha no runtime: " + ex.Message); }
+            try { Process proc = Process.Start(new ProcessStartInfo { FileName = runtimePath, Arguments = "--self-test", WorkingDirectory = Path.GetDirectoryName(runtimePath), UseShellExecute = false, CreateNoWindow = false }); if (proc == null) throw new InvalidOperationException("Process.Start returned no process"); WriteLog("Runtime próprio iniciou o self-test. Nenhum jogo foi iniciado. PID=" + proc.Id); status.Text = "Self-test executado"; MessageBox.Show(this, "O runtime próprio ainda não inicia jogos. O self-test AVX1 foi executado.\n\nPara iniciar o Xenia, selecione 'Intel SDE 9.58 (inicia jogos)'.", "Backend experimental", MessageBoxButtons.OK, MessageBoxIcon.Information); } catch (Exception ex) { WriteLog("Falha no runtime: " + ex.Message); }
         }
 
         private void SaveProfile(object sender, EventArgs e)
@@ -267,7 +279,7 @@ namespace SdeAvxLab
         {
             sdePath.Text = s.SdePath; targetPath.Text = s.TargetPath; workPath.Text = s.WorkingDirectory; targetArgs.Text = s.Arguments; mixBox.Checked = s.Mix; xinuseBox.Checked = s.XInUse;
             for (int i = 0; i < profileBox.Items.Count; i++) if (((CpuProfile)profileBox.Items[i]).Switch == s.Profile) profileBox.SelectedIndex = i;
-            if (!String.IsNullOrWhiteSpace(s.Backend)) backendBox.Text = s.Backend;
+            if (!String.IsNullOrWhiteSpace(s.Backend)) backendBox.SelectedIndex = s.Backend.IndexOf("Intel SDE", StringComparison.OrdinalIgnoreCase) >= 0 ? 1 : 0;
         }
         private void Diagnose(object sender, EventArgs e)
         {

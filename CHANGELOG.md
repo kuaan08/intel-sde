@@ -2,6 +2,9 @@
 
 ## Unreleased — Independent runtime milestone
 
+- Clarified that the independent launcher backend runs a self-test only and does not launch game processes.
+- Added an explicit external Intel SDE launch label and backward-compatible loading of older profile names.
+- Added a Windows compatibility/DPI manifest so diagnostics identify Windows 10 correctly.
 - Added a shared IR data model for vector operations and memory operands.
 - Added an x64 ModRM/SIB address decoder with RIP-relative and displacement handling.
 - Added a translated-block cache prototype with overlap-based invalidation.

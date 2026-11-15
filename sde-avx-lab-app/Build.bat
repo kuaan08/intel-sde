@@ -9,7 +9,7 @@ if not exist "%CSC%" (
   exit /b 2
 )
 if not exist bin mkdir bin
-"%CSC%" /nologo /target:winexe /platform:x64 /optimize+ /out:"bin\SDE AVX Lab.exe" /reference:System.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll SDEAvxLabLauncher.cs
+"%CSC%" /nologo /target:winexe /platform:x64 /optimize+ /win32manifest:app.manifest /out:"bin\SDE AVX Lab.exe" /reference:System.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll SDEAvxLabLauncher.cs
 if errorlevel 1 (
   echo Build failed.
   exit /b 1

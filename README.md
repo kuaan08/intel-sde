@@ -96,7 +96,7 @@ Build.bat
 Start.bat
 ```
 
-The application selects the SDE AVX Lab Runtime as its default backend. In the current prototype, that backend runs the independent runtime self-test. It does not yet translate an arbitrary game process. Intel SDE 9.58 is available as an explicitly labelled external comparison backend.
+The application selects the SDE AVX Lab Runtime as its default backend. In the current prototype, that backend runs only the independent runtime self-test and does not launch an arbitrary game process. To launch Xenia or another target, select the explicitly labelled Intel SDE 9.58 external backend.
 
 ## Independent runtime test on Linux x86-64 or ARM64/QEMU
 
